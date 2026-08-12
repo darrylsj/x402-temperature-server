@@ -1,0 +1,16 @@
+[Unit]
+Description=x402 Temperature Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/x402-temperature-server
+EnvironmentFile=/opt/x402-temperature-server/.env
+ExecStart=/opt/x402-temperature-server/.venv/bin/python -m x402_temperature_server
+Restart=always
+RestartSec=5
+User=pi
+
+[Install]
+WantedBy=multi-user.target
+

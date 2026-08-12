@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "x402-temperature-server"
+version = "0.1.0"
+description = "A Raspberry Pi temperature sensor API that can sell live readings through x402."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = [
+  "fastapi>=0.116.0",
+  "uvicorn[standard]>=0.35.0"
+]
+
+[project.optional-dependencies]
+sensor = [
+  "adafruit-blinka>=8.60.0",
+  "adafruit-circuitpython-bme280>=2.6.0"
+]
+x402 = [
+  "cdp-sdk>=1.28.0",
+  "x402[evm,svm,fastapi]>=0.5.0"
+]
+dev = [
+  "pytest>=8.4.0",
+  "httpx>=0.28.0"
+]
+
+[project.scripts]
+x402-temperature-server = "x402_temperature_server.__main__:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+

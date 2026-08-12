@@ -1,0 +1,13 @@
+{
+  "station": "roof-demo-01",
+  "location": "Neighborhood station",
+  "celsius": 21.42,
+  "fahrenheit": 70.56,
+  "humidity": 48.3,
+  "pressure_hpa": 1013.2,
+  "read_at": "2026-08-12T08:00:00Z",
+  "ttl_seconds": 60,
+  "lat": 37.33,
+  "lon": -121.89
+}
+

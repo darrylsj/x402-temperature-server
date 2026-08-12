@@ -1,0 +1,13 @@
+{
+  "error": "X-PAYMENT header is required",
+  "accepts": [
+    {
+      "scheme": "exact",
+      "network": "base",
+      "asset": "USDC",
+      "amount": "0.001",
+      "resource": "GET /temperature"
+    }
+  ]
+}
+
