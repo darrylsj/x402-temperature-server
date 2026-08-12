@@ -2,6 +2,8 @@
 
 This project supports two production designs. They use the same sensor code, but make different reliability and cost trade-offs.
 
+![Cloud collector architecture and self-contained Pi architecture](images/cloud-vs-self-contained-architecture.jpg)
+
 ## Option A: Cloud Collector + x402 Seller
 
 In this design the Raspberry Pi is a private sensor node. It reads the BME280 or DS18B20 and periodically posts a signed reading to a small cloud service. The cloud service stores the latest reading and exposes the paid x402 endpoint.

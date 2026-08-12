@@ -6,6 +6,10 @@ These diagrams are intentionally simple enough to build from at a bench.
 
 Use this for the first prototype.
 
+![Raspberry Pi Zero 2 W connected to a BME280 sensor over I2C](images/pi-zero-2w-bme280-wiring.jpg)
+
+Use the image as the visual guide, then verify each connection against the pin table below before powering the Pi. Some BME280 breakout boards label the same I2C pins as `SCL` and `SDA`; this repo's example board labels them `SCK` and `SDI`.
+
 ```text
 Top view: Raspberry Pi Zero 2 W 40-pin header
 
@@ -35,6 +39,10 @@ Pin table:
 Notes:
 
 - Use 3.3 V.
+- Connect Pi pin `1` to BME280 `VIN`.
+- Connect Pi pin `3` / GPIO2 / SDA to BME280 `SDI` or `SDA`.
+- Connect Pi pin `5` / GPIO3 / SCL to BME280 `SCK` or `SCL`.
+- Connect Pi pin `6` to BME280 `GND`.
 - Most BME280 boards appear at I2C address `0x76` or `0x77`.
 - Run `i2cdetect -y 1` after enabling I2C.
 
@@ -79,6 +87,8 @@ Wall outlet
 ```
 
 ## Solar Outdoor Layout
+
+![Solar-powered outdoor enclosure with panel, battery, Raspberry Pi, and external temperature sensor](images/solar-field-enclosure.jpg)
 
 ```text
 Sun

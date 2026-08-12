@@ -2,6 +2,10 @@
 
 This is the optional off-grid power design for the x402 temperature station. Build and verify the wired indoor version first, then move to solar.
 
+![Solar-powered outdoor enclosure with panel, battery, Raspberry Pi, and external temperature sensor](images/solar-field-enclosure.jpg)
+
+The visual shows the intended field layout: a 10 W panel mounted in sun, a weatherproof enclosure holding the Raspberry Pi and Voltaic V75 battery, and an external temperature sensor kept out of direct sun.
+
 ## Power Budget
 
 A Raspberry Pi Zero 2 W plus a BME280 sensor is a small but still meaningful continuous load. Size the power system for the Pi, Wi-Fi, the sensor, conversion losses, and cloudy periods.

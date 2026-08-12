@@ -4,6 +4,8 @@ Build a small Raspberry Pi weather station that sells live hyperlocal temperatur
 
 This is the companion implementation for the weather-bot chapter of *The x402 Handbook*. The book explains the idea. This repo is the build packet: hardware list, wiring diagrams, Raspberry Pi setup, sensor backends, tests, sample output, service setup, cloud and edge deployment options, solar power option, and x402 production notes.
 
+![Raspberry Pi Zero 2 W connected to a BME280 sensor over I2C](docs/images/pi-zero-2w-bme280-wiring.jpg)
+
 ## Repository Status
 
 - Public repo: <https://github.com/darrylsj/x402-temperature-server>
@@ -71,6 +73,8 @@ Optional outdoor additions:
 
 Full wiring diagrams are in [docs/hardware-diagrams.md](docs/hardware-diagrams.md).
 
+The visual wiring guide above is included for quick reference. The pin table below is the authority if the breakout board labels differ.
+
 BME280 I2C wiring:
 
 ```text
@@ -87,6 +91,8 @@ Use 3.3 V. Do not feed the sensor from 5 V unless your breakout board explicitly
 ## Deployment Options
 
 Detailed architecture trade-offs are in [docs/architecture-options.md](docs/architecture-options.md).
+
+![Cloud collector architecture and self-contained Pi architecture](docs/images/cloud-vs-self-contained-architecture.jpg)
 
 ### Option A: Cloud Collector + x402 Seller
 
@@ -205,6 +211,8 @@ Production verification checklist:
 
 Solar design is in [docs/solar-power.md](docs/solar-power.md).
 
+![Solar-powered outdoor enclosure with panel, battery, Raspberry Pi, and external temperature sensor](docs/images/solar-field-enclosure.jpg)
+
 Recommended field prototype:
 
 - Voltaic V75 USB Battery Pack, 20,100 mAh / 72 Wh, Always On output
@@ -246,6 +254,7 @@ Current tests cover:
 - `docs/software-runbook.md` - Pi and service setup
 - `docs/architecture-options.md` - cloud collector vs self-contained Pi design
 - `docs/solar-power.md` - solar and battery sizing
+- `docs/images/` - visual wiring, solar enclosure, and architecture assets
 - `samples/` - representative paid and unpaid output
 - `systemd/` - Raspberry Pi service unit
 - `tests/test_app.py` - offline tests
