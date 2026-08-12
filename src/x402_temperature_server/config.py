@@ -34,6 +34,9 @@ class Settings:
     x402_price_usd: str = "0.001"
     x402_network: str = "base"
     pay_to_evm_address: str = ""
+    enable_cloud_collector: bool = False
+    station_ingest_token: str = ""
+    ingest_max_age_seconds: int = 900
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -50,5 +53,7 @@ class Settings:
             x402_price_usd=os.getenv("X402_PRICE_USD", "0.001"),
             x402_network=os.getenv("X402_NETWORK", "base"),
             pay_to_evm_address=os.getenv("PAY_TO_EVM_ADDRESS", ""),
+            enable_cloud_collector=_bool(os.getenv("ENABLE_CLOUD_COLLECTOR"), False),
+            station_ingest_token=os.getenv("STATION_INGEST_TOKEN", ""),
+            ingest_max_age_seconds=_int("INGEST_MAX_AGE_SECONDS", 900),
         )
-

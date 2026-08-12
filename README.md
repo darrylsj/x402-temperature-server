@@ -12,7 +12,7 @@ This is the companion implementation for the weather-bot chapter of *The x402 Ha
 - License: MIT
 - Runtime: Python 3.10+ with FastAPI
 - Supported sensors: mock, BME280, DS18B20
-- Current tests: `4` offline tests
+- Current tests: `7` offline tests
 - Default mode: local mock sensor, x402 disabled
 
 ## What It Sells
@@ -29,6 +29,8 @@ This is the companion implementation for the weather-bot chapter of *The x402 Ha
   "pressure_hpa": 1013.2,
   "read_at": "2026-08-12T08:00:00Z",
   "ttl_seconds": 60,
+  "age_seconds": 0,
+  "stale": false,
   "lat": 37.33,
   "lon": -121.89
 }
@@ -124,6 +126,26 @@ Buyer agent
 
 Use this when the story matters: the tiny device sells its own data. It is less reliable than the cloud design because the paid endpoint depends on home internet, Wi-Fi, power, and the Pi itself.
 
+## Recommendations Folded Into This Repo
+
+The build uses the recommendations that make the first public reference design more reliable without hiding the edge-computing story.
+
+Accepted:
+
+- Build the wired Pi + BME280 first, then add solar after the sensor path is stable.
+- Keep the cloud collector design as the recommended public x402 endpoint.
+- Keep the self-contained Pi seller as the second reference design.
+- Include `age_seconds` and `stale` in paid responses so buyer agents know whether the reading is fresh.
+- Support optional battery fields in the collector payload for solar deployments.
+- Use a per-station ingest token when Pi nodes post to the cloud collector.
+- Keep exact coordinates, wallet secrets, API keys, and station tokens out of the public repo.
+
+Deferred:
+
+- Persistent cloud storage. The included collector is intentionally in-memory for the first runnable demo; use SQLite, Postgres, Redis, or a small JSON-backed store before treating it as production.
+- A full Node/Express Circle Gateway proxy. The docs describe the recommended production shape, while this Python app remains the sensor and collector layer.
+- Low-power battery control. The docs recommend it, but the first hardware order does not include battery telemetry hardware.
+
 ## Local Quick Start
 
 Run the app on a development machine with the mock sensor:
@@ -207,6 +229,46 @@ Production verification checklist:
 5. Buyer can tell whether the reading is fresh or stale.
 6. No secrets are committed.
 
+## Cloud Collector Mode
+
+Run this mode on the cheap VPS when one or more Pi sensor nodes should post readings to a reliable public endpoint.
+
+Cloud `.env`:
+
+```bash
+ENABLE_CLOUD_COLLECTOR=true
+STATION_ID=roof-demo-01
+STATION_INGEST_TOKEN=replace-with-random-token
+READING_TTL_SECONDS=180
+INGEST_MAX_AGE_SECONDS=900
+ENABLE_X402=false
+```
+
+Example ingest request from a Pi node:
+
+```bash
+curl -X POST http://127.0.0.1:8080/sensor-readings \
+  -H 'Content-Type: application/json' \
+  -H 'X-Station-Token: replace-with-random-token' \
+  -d '{
+    "station": "roof-demo-01",
+    "celsius": 21.42,
+    "humidity": 48.3,
+    "pressure_hpa": 1013.2,
+    "read_at": "2026-08-12T08:00:00Z",
+    "battery_percent": 84,
+    "battery_voltage": 5.08
+  }'
+```
+
+Fetch the latest stored reading:
+
+```bash
+curl http://127.0.0.1:8080/temperature/latest
+```
+
+The cloud collector is deliberately simple and in-memory. It proves the API contract. A deployed version should add durable storage and put x402 protection in front of `GET /temperature/latest`.
+
 ## Solar And Battery Backup
 
 Solar design is in [docs/solar-power.md](docs/solar-power.md).
@@ -243,6 +305,8 @@ Current tests cover:
 - temperature payload shape in mock mode
 - rounded coordinates for privacy
 - free discovery manifest
+- cloud collector ingest and latest-reading endpoint
+- cloud collector station-token and old-reading rejection
 
 ## File Map
 
@@ -253,6 +317,7 @@ Current tests cover:
 - `docs/hardware-diagrams.md` - wiring diagrams
 - `docs/software-runbook.md` - Pi and service setup
 - `docs/architecture-options.md` - cloud collector vs self-contained Pi design
+- `docs/field-design-recommendations.md` - accepted, deferred, and rejected recommendations
 - `docs/solar-power.md` - solar and battery sizing
 - `docs/images/` - visual wiring, solar enclosure, and architecture assets
 - `samples/` - representative paid and unpaid output

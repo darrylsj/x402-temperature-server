@@ -56,11 +56,13 @@ Recommendation: use RackNerd for the working reference design. It is cheap enoug
   - Authenticated by a per-station ingest token.
   - Accepts station id, reading timestamp, temperature, humidity, pressure, and optional battery status.
   - Rejects readings that are too old or have impossible values.
+  - Included in this repo when `ENABLE_CLOUD_COLLECTOR=true`.
 
 - `GET /temperature/latest`
   - x402-protected.
   - Returns the latest valid reading for a station.
   - Includes `read_at`, `age_seconds`, and `stale` so buyers know whether the reading is fresh.
+  - Included in this repo as an in-memory reference endpoint.
 
 - `GET /health`
   - Free.

@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 
 from x402_temperature_server.app import create_app
 from x402_temperature_server.config import Settings
-from x402_temperature_server.sensors import MockSensor
+from x402_temperature_server.sensors import MockSensor, utc_now_iso
 
 
 def client() -> TestClient:
@@ -20,7 +20,12 @@ def client() -> TestClient:
 def test_health() -> None:
     response = client().get("/health")
     assert response.status_code == 200
-    assert response.json() == {"ok": True, "station": "roof-test-01", "paid_route": False}
+    assert response.json() == {
+        "ok": True,
+        "station": "roof-test-01",
+        "paid_route": False,
+        "collector": False,
+    }
 
 
 def test_temperature_payload() -> None:
@@ -33,6 +38,8 @@ def test_temperature_payload() -> None:
     assert payload["humidity"] == 48.3
     assert payload["pressure_hpa"] == 1013.2
     assert payload["ttl_seconds"] == 60
+    assert payload["age_seconds"] == 0
+    assert payload["stale"] is False
     assert payload["read_at"].endswith("Z")
 
 
@@ -47,3 +54,60 @@ def test_free_manifest_names_paid_route() -> None:
     assert payload["paid_endpoint"] == "GET /temperature"
     assert payload["price_usd"] == "0.001"
 
+
+def test_cloud_collector_ingest_and_latest() -> None:
+    settings = Settings(
+        sensor_backend="mock",
+        station_id="roof-test-01",
+        location_label="Test neighborhood",
+        latitude=37.7749295,
+        longitude=-122.4194155,
+        enable_cloud_collector=True,
+        station_ingest_token="secret",
+    )
+    test_client = TestClient(create_app(settings=settings, sensor=MockSensor()))
+
+    reading = {
+        "station": "roof-test-01",
+        "celsius": 19.5,
+        "humidity": 52.25,
+        "pressure_hpa": 1011.74,
+        "read_at": utc_now_iso(),
+        "battery_percent": 84.0,
+        "battery_voltage": 5.08,
+    }
+    ingest = test_client.post("/sensor-readings", json=reading, headers={"X-Station-Token": "secret"})
+    assert ingest.status_code == 200
+
+    latest = test_client.get("/temperature/latest").json()
+    assert latest["station"] == "roof-test-01"
+    assert latest["celsius"] == 19.5
+    assert latest["fahrenheit"] == 67.1
+    assert latest["humidity"] == 52.2
+    assert latest["pressure_hpa"] == 1011.7
+    assert latest["battery_percent"] == 84.0
+    assert latest["battery_voltage"] == 5.08
+    assert latest["age_seconds"] >= 0
+    assert latest["stale"] is False
+
+
+def test_cloud_collector_rejects_bad_token() -> None:
+    settings = Settings(enable_cloud_collector=True, station_ingest_token="secret")
+    test_client = TestClient(create_app(settings=settings, sensor=MockSensor()))
+    response = test_client.post(
+        "/sensor-readings",
+        json={"station": "roof-test-01", "celsius": 19.5, "read_at": "2026-08-12T08:00:00Z"},
+        headers={"X-Station-Token": "wrong"},
+    )
+    assert response.status_code == 401
+
+
+def test_cloud_collector_rejects_old_reading() -> None:
+    settings = Settings(enable_cloud_collector=True, station_ingest_token="secret", ingest_max_age_seconds=60)
+    test_client = TestClient(create_app(settings=settings, sensor=MockSensor()))
+    response = test_client.post(
+        "/sensor-readings",
+        json={"station": "roof-test-01", "celsius": 19.5, "read_at": "2026-08-12T08:00:00Z"},
+        headers={"X-Station-Token": "secret"},
+    )
+    assert response.status_code == 422

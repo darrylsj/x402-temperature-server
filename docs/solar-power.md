@@ -78,3 +78,5 @@ With conversion losses and temperature effects, expect less. The V75 is the sens
 - Add a low-power mode that lowers read frequency or disables nonessential services if battery is low.
 - Add a watchdog restart and daily uptime counter.
 - Publish solar/battery status in the paid payload only if the station owner wants buyers to see the station health.
+
+The cloud collector payload already accepts optional `battery_percent` and `battery_voltage` fields, so a future voltage monitor can publish station-health data without changing the buyer response schema.

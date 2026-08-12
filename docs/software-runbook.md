@@ -146,6 +146,39 @@ GET /.well-known/x402-temperature.json
 GET /temperature/latest
 ```
 
+Enable the runnable in-memory collector:
+
+```bash
+ENABLE_CLOUD_COLLECTOR=true
+STATION_ID=roof-demo-01
+STATION_INGEST_TOKEN=replace-with-random-token
+READING_TTL_SECONDS=180
+INGEST_MAX_AGE_SECONDS=900
+```
+
+Example Pi-to-cloud post:
+
+```bash
+curl -X POST https://YOUR-CLOUD-HOST/sensor-readings \
+  -H 'Content-Type: application/json' \
+  -H 'X-Station-Token: replace-with-random-token' \
+  -d '{
+    "station": "roof-demo-01",
+    "celsius": 21.42,
+    "humidity": 48.3,
+    "pressure_hpa": 1013.2,
+    "read_at": "2026-08-12T08:00:00Z",
+    "battery_percent": 84,
+    "battery_voltage": 5.08
+  }'
+```
+
+Example buyer-facing latest-reading request:
+
+```bash
+curl https://YOUR-CLOUD-HOST/temperature/latest
+```
+
 Freshness policy:
 
 ```text
@@ -203,6 +236,7 @@ Before calling the station production-ready:
 - `/temperature` returns real sensor values.
 - Coordinates are rounded.
 - Sensor timestamp is current.
+- Response includes `age_seconds` and `stale`.
 - Service restarts after reboot.
 - Logs show no sensor read errors.
 - Free manifest is reachable.
