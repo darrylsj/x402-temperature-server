@@ -1,8 +1,17 @@
 # x402 Temperature Server
 
-This is the companion implementation for the weather-bot chapter of *The x402 Handbook*: a Raspberry Pi endpoint that sells a live hyperlocal temperature reading for a tiny USDC payment.
+Build a small Raspberry Pi weather station that sells live hyperlocal temperature readings to buyer agents through x402.
 
-The book keeps the idea short. This repo carries the operational detail: sensor backends, tests, Raspberry Pi setup notes, sample output, systemd service, and the production x402 switch.
+This is the companion implementation for the weather-bot chapter of *The x402 Handbook*. The book explains the idea. This repo is the build packet: hardware list, wiring diagrams, Raspberry Pi setup, sensor backends, tests, sample output, service setup, cloud and edge deployment options, solar power option, and x402 production notes.
+
+## Repository Status
+
+- Public repo: <https://github.com/darrylsj/x402-temperature-server>
+- License: MIT
+- Runtime: Python 3.10+ with FastAPI
+- Supported sensors: mock, BME280, DS18B20
+- Current tests: `4` offline tests
+- Default mode: local mock sensor, x402 disabled
 
 ## What It Sells
 
@@ -25,36 +34,93 @@ The book keeps the idea short. This repo carries the operational detail: sensor 
 
 The latitude and longitude are rounded on purpose. Sell the weather near you, not your doorstep.
 
-## Hardware
+## Build Goals
 
-Minimum build:
+1. Prove a real physical sensor can produce a paid agent-readable data product.
+2. Keep the Pi setup simple enough for a reader to reproduce.
+3. Support two production architectures:
+   - a cloud collector that receives Pi readings and handles x402 in the cloud;
+   - a self-contained Pi endpoint that runs the paid service at the edge.
+4. Keep free discovery endpoints available so buyer agents can inspect the service before paying.
+5. Keep exact home coordinates, wallet secrets, API keys, and private infrastructure out of the repo.
 
-- Raspberry Pi Zero 2 W or Zero WH
-- 32GB microSD card
-- Micro USB power supply
-- BME280 sensor for temperature, humidity, and pressure
-- Female-to-female jumper wires, or a STEMMA/Qwiic adapter path
-- Small case or enclosure
+## Hardware Shopping List
 
-Optional outdoor build:
+The exact ordering packet is in [docs/hardware-ordering.md](docs/hardware-ordering.md).
 
-- DS18B20 waterproof temperature probe
-- 4.7k resistor for the DS18B20 data pull-up
-- Weatherproof enclosure and radiation shield
-- Solar panel and always-on battery pack after the first wired version is stable
+Minimum wired prototype:
 
-See [docs/solar-power.md](docs/solar-power.md) for the recommended solar and battery backup design.
+| Item | Example source | Why |
+| --- | --- | --- |
+| Raspberry Pi Zero 2 W Starter Kit | PiShop.us | Pi, microSD, power, case, and basic accessories in one bundle |
+| Adafruit BME280 I2C/SPI sensor | PiShop.us | Temperature, humidity, and pressure over I2C |
+| Female-to-female jumper wires | Included or separate | Connect Pi GPIO to sensor pins |
+
+Optional outdoor additions:
+
+| Item | Example source | Why |
+| --- | --- | --- |
+| DS18B20 waterproof probe | Adafruit, PiShop, or equivalent | Outdoor temperature probe |
+| 4.7k resistor | Common electronics part | Required pull-up for DS18B20 data line |
+| Weatherproof enclosure | Any suitable IP-rated enclosure | Protects Pi and wiring |
+| Radiation shield | Weather-station accessory | Prevents direct sun from distorting readings |
+| Voltaic V75 battery | Voltaic Systems | Always-on 72 Wh USB battery |
+| Voltaic 10 W 6 V ETFE panel | Voltaic Systems | Solar charging for the battery |
+
+## Hardware Diagram
+
+Full wiring diagrams are in [docs/hardware-diagrams.md](docs/hardware-diagrams.md).
+
+BME280 I2C wiring:
+
+```text
+Raspberry Pi Zero 2 W              BME280 breakout
+----------------------             ----------------
+Pin 1  3V3            -----------> VIN
+Pin 6  GND            -----------> GND
+Pin 5  GPIO3 / SCL    -----------> SCK / SCL
+Pin 3  GPIO2 / SDA    -----------> SDI / SDA
+```
+
+Use 3.3 V. Do not feed the sensor from 5 V unless your breakout board explicitly supports it.
 
 ## Deployment Options
 
-There are two supported production shapes:
+Detailed architecture trade-offs are in [docs/architecture-options.md](docs/architecture-options.md).
 
-- [Cloud collector + x402 seller](docs/architecture-options.md#option-a-cloud-collector--x402-seller) - the Pi posts readings to a cheap cloud server; the cloud service sells the latest reading through x402.
-- [Self-contained Pi seller](docs/architecture-options.md#option-b-self-contained-pi-seller) - the Pi reads the sensor and serves the paid x402 endpoint directly.
+### Option A: Cloud Collector + x402 Seller
 
-Use the cloud collector design when reliability and multiple sensors matter. Use the self-contained design when the goal is the purest edge-compute demo.
+```text
+Raspberry Pi sensor node
+  -> HTTPS POST /sensor-readings
+  -> cheap cloud VPS
+  -> x402 protected GET /temperature/latest
+  -> buyer agents
+```
+
+Use this when reliability and multiple sensors matter. The Pi can disappear briefly and the paid endpoint can still answer with freshness metadata.
+
+Recommended cheap host:
+
+- Practical recommendation: RackNerd 1 GB KVM VPS specials, roughly USD 21.99/year when available.
+- Strict USD 1/month cost demo: VPS1Dollar, with IPv6-first/NAT64 caveats.
+- Mainstream fallback: IONOS VPS XS, usually closer to USD 2/month or higher.
+
+### Option B: Self-Contained Pi x402 Seller
+
+```text
+Buyer agent
+  -> public HTTPS URL
+  -> Raspberry Pi x402 endpoint
+  -> local sensor read
+  -> paid JSON response
+```
+
+Use this when the story matters: the tiny device sells its own data. It is less reliable than the cloud design because the paid endpoint depends on home internet, Wi-Fi, power, and the Pi itself.
 
 ## Local Quick Start
+
+Run the app on a development machine with the mock sensor:
 
 ```bash
 python3 -m venv .venv
@@ -65,8 +131,6 @@ python -m pytest
 python -m x402_temperature_server
 ```
 
-Local development uses `SENSOR_BACKEND=mock` and `ENABLE_X402=false`, so tests run without hardware, secrets, or blockchain access.
-
 Try it:
 
 ```bash
@@ -75,66 +139,121 @@ curl http://127.0.0.1:8080/temperature
 curl http://127.0.0.1:8080/.well-known/x402-temperature.json
 ```
 
+Expected health response:
+
+```json
+{
+  "ok": true,
+  "station": "roof-demo-01",
+  "paid_route": false
+}
+```
+
 ## Raspberry Pi Setup
 
-The detailed Pi wiring and service setup is in [docs/raspberry-pi-build.md](docs/raspberry-pi-build.md).
-
-For the BME280 path, enable I2C and use:
+The Pi runbook is in [docs/software-runbook.md](docs/software-runbook.md). Short version:
 
 ```bash
-python -m pip install '.[sensor,x402]'
-export SENSOR_BACKEND=bme280
-export I2C_ADDRESS=0x76
+sudo apt update
+sudo apt install -y git python3-venv python3-pip i2c-tools
+git clone https://github.com/darrylsj/x402-temperature-server.git
+cd x402-temperature-server
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install '.[sensor]'
+cp .env.example .env
+```
+
+Edit `.env` for BME280:
+
+```bash
+SENSOR_BACKEND=bme280
+I2C_ADDRESS=0x76
+ENABLE_X402=false
+```
+
+Run it:
+
+```bash
 python -m x402_temperature_server
 ```
 
 ## x402 Production Mode
 
-Set these environment variables on the Pi or hosting service:
+For the current Circle Gateway Nanopayments seller path, the recommended production approach is a thin Node/Express payment proxy in front of the Python sensor service. The Python app remains the sensor and payload layer; the proxy handles x402 payment negotiation and settlement.
+
+The older direct FastAPI x402 switch remains in this repo as an educational path:
 
 ```bash
 ENABLE_X402=true
 X402_PRICE_USD=0.001
 X402_NETWORK=base
 PAY_TO_EVM_ADDRESS=0xYourReceivingWallet
-CDP_API_KEY_ID=...
-CDP_API_KEY_SECRET=...
 ```
 
-With `ENABLE_X402=true`, `GET /temperature` is protected by x402 payment middleware. An unpaid buyer receives a `402 Payment Required` response; a paid buyer receives the JSON reading.
+Production verification checklist:
 
-Keep `GET /health` and `GET /.well-known/x402-temperature.json` free so buyer agents can inspect the service before paying.
+1. Unpaid request returns `402 Payment Required`.
+2. Free manifest is reachable at `/.well-known/x402-temperature.json`.
+3. Paid request returns the JSON reading.
+4. Response includes `read_at`, `ttl_seconds`, and rounded coordinates.
+5. Buyer can tell whether the reading is fresh or stale.
+6. No secrets are committed.
 
-## Bazaar Discovery
+## Solar And Battery Backup
 
-After deployment behind public HTTPS:
+Solar design is in [docs/solar-power.md](docs/solar-power.md).
 
-1. Confirm the unpaid route returns `402`.
-2. Confirm a paid request returns the JSON reading.
-3. Validate the endpoint with Coinbase's x402 validation endpoint.
-4. Submit the public URL to discovery shelves such as Bazaar.
-5. Make your own first paid call and publish the receipt.
+Recommended field prototype:
 
-The station should advertise a short TTL. A temperature reading is valuable for minutes, not days.
+- Voltaic V75 USB Battery Pack, 20,100 mAh / 72 Wh, Always On output
+- Voltaic 10 Watt 6 Volt ETFE Solar Panel
+- USB-A to micro USB cable for Pi power
+- Weatherproof enclosure and mounting hardware
+
+Planning number:
+
+```text
+Pi Zero 2 W + Wi-Fi + BME280: plan for 1.0-1.5 W
+Conservative daily draw: 1.5 W x 24 h = 36 Wh/day
+With conversion overhead: about 43 Wh/day
+```
+
+The V75 is the recommended first outdoor battery because a 48 Wh battery is tight for full-time operation.
 
 ## Tests
 
 ```bash
+. .venv/bin/activate
 python -m pytest
 ```
 
 Current tests cover:
 
 - health endpoint
-- paid-resource payload shape in mock mode
+- temperature payload shape in mock mode
 - rounded coordinates for privacy
 - free discovery manifest
 
-## Files
+## File Map
 
 - `src/x402_temperature_server/app.py` - FastAPI app and routes
 - `src/x402_temperature_server/sensors.py` - mock, BME280, and DS18B20 sensor backends
-- `src/x402_temperature_server/payment.py` - optional x402 middleware installation
-- `tests/test_app.py` - offline tests
+- `src/x402_temperature_server/payment.py` - optional direct x402 middleware installation
+- `docs/hardware-ordering.md` - ordering list and shopping notes
+- `docs/hardware-diagrams.md` - wiring diagrams
+- `docs/software-runbook.md` - Pi and service setup
+- `docs/architecture-options.md` - cloud collector vs self-contained Pi design
+- `docs/solar-power.md` - solar and battery sizing
 - `samples/` - representative paid and unpaid output
 - `systemd/` - Raspberry Pi service unit
+- `tests/test_app.py` - offline tests
+
+## Security Notes
+
+- Do not commit wallet private keys, API keys, OTPs, or production `.env` files.
+- Publish rounded coordinates only.
+- Keep `/health` and `/.well-known/x402-temperature.json` free.
+- For cloud ingestion, use per-station ingest tokens.
+- For paid data, always include freshness metadata so agents know what they bought.
