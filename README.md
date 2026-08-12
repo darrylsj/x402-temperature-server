@@ -41,7 +41,9 @@ Optional outdoor build:
 - DS18B20 waterproof temperature probe
 - 4.7k resistor for the DS18B20 data pull-up
 - Weatherproof enclosure and radiation shield
-- Solar panel, charge controller, and battery after the first wired version is stable
+- Solar panel and always-on battery pack after the first wired version is stable
+
+See [docs/solar-power.md](docs/solar-power.md) for the recommended solar and battery backup design.
 
 ## Local Quick Start
 
@@ -127,4 +129,3 @@ Current tests cover:
 - `tests/test_app.py` - offline tests
 - `samples/` - representative paid and unpaid output
 - `systemd/` - Raspberry Pi service unit
-
