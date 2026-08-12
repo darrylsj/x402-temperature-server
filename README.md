@@ -45,6 +45,15 @@ Optional outdoor build:
 
 See [docs/solar-power.md](docs/solar-power.md) for the recommended solar and battery backup design.
 
+## Deployment Options
+
+There are two supported production shapes:
+
+- [Cloud collector + x402 seller](docs/architecture-options.md#option-a-cloud-collector--x402-seller) - the Pi posts readings to a cheap cloud server; the cloud service sells the latest reading through x402.
+- [Self-contained Pi seller](docs/architecture-options.md#option-b-self-contained-pi-seller) - the Pi reads the sensor and serves the paid x402 endpoint directly.
+
+Use the cloud collector design when reliability and multiple sensors matter. Use the self-contained design when the goal is the purest edge-compute demo.
+
 ## Local Quick Start
 
 ```bash
