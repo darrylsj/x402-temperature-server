@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 
 from x402_temperature_server.app import create_app
 from x402_temperature_server.config import Settings
-from x402_temperature_server.sensors import MockSensor, utc_now_iso
+from x402_temperature_server.sensors import MockSensor, SimulatedSensor, utc_now_iso
 
 
 def client() -> TestClient:
@@ -51,8 +51,35 @@ def test_coordinates_are_rounded_for_privacy() -> None:
 
 def test_free_manifest_names_paid_route() -> None:
     payload = client().get("/.well-known/x402-temperature.json").json()
+    assert payload["architecture"] == "self-contained-edge"
     assert payload["paid_endpoint"] == "GET /temperature"
     assert payload["price_usd"] == "0.001"
+
+
+def test_openapi_marks_paid_edge_operation_for_agents() -> None:
+    payload = client().get("/openapi.json").json()
+    assert payload["info"]["x-guidance"]
+    payment_info = payload["paths"]["/temperature"]["get"]["x-payment-info"]
+    assert payment_info["price"] == {"amount": "0.001", "currency": "USD"}
+    assert payment_info["protocols"][0]["name"] == "x402"
+
+
+def test_simulated_sensor_payload_is_environmental() -> None:
+    settings = Settings(
+        sensor_backend="simulated",
+        station_id="roof-test-01",
+        simulated_base_celsius=21.4,
+        simulated_daily_swing_celsius=0,
+        simulated_noise_celsius=0,
+        simulated_humidity=49.5,
+        simulated_pressure_hpa=1012.6,
+    )
+    test_client = TestClient(create_app(settings=settings, sensor=SimulatedSensor(21.4, 0, 0, 49.5, 1012.6)))
+    payload = test_client.get("/temperature").json()
+    assert payload["celsius"] == 21.4
+    assert payload["fahrenheit"] == 70.52
+    assert payload["humidity"] == 49.5
+    assert payload["pressure_hpa"] == 1012.6
 
 
 def test_cloud_collector_ingest_and_latest() -> None:
@@ -89,6 +116,12 @@ def test_cloud_collector_ingest_and_latest() -> None:
     assert latest["battery_voltage"] == 5.08
     assert latest["age_seconds"] >= 0
     assert latest["stale"] is False
+
+    manifest = test_client.get("/.well-known/x402-temperature.json").json()
+    assert manifest["architecture"] == "cloud-collector"
+    assert manifest["paid_endpoint"] == "GET /temperature/latest"
+    openapi = test_client.get("/openapi.json").json()
+    assert "x-payment-info" in openapi["paths"]["/temperature/latest"]["get"]
 
 
 def test_cloud_collector_rejects_bad_token() -> None:

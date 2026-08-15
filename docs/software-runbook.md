@@ -12,6 +12,8 @@ python3 -m venv .venv
 python -m pip install --upgrade pip
 python -m pip install '.[dev]'
 python -m pytest
+cd proxy && npm install && npm test && cd ..
+./scripts/test-both-architectures.sh
 python -m x402_temperature_server
 ```
 
@@ -156,6 +158,8 @@ READING_TTL_SECONDS=180
 INGEST_MAX_AGE_SECONDS=900
 ```
 
+For a no-hardware demo, keep `SENSOR_BACKEND=simulated` and post a simulated reading with the same schema.
+
 Example Pi-to-cloud post:
 
 ```bash
@@ -200,6 +204,18 @@ public HTTPS
 ```
 
 This keeps the Python app simple and lets Circle's current Gateway Nanopayments seller middleware handle the payment layer.
+
+Run the local mock-payment proxy:
+
+```bash
+cd proxy
+ARCHITECTURE=edge \
+X402_GATEWAY_MODE=mock \
+SENSOR_ORIGIN=http://127.0.0.1:8080 \
+npm start
+```
+
+An unpaid call to `GET /temperature` returns `402`; a local test call with `x-payment: test-paid` returns the forwarded JSON. Use `X402_GATEWAY_MODE=circle` only for a real Circle Gateway test after confirming the seller address, chain/network, URL, and amount.
 
 Ingress options:
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi.openapi.utils import get_openapi
 from pydantic import BaseModel, Field
 
 from .config import Settings
@@ -67,6 +68,52 @@ def _validate_reading_age(read_at: datetime, max_age_seconds: int) -> None:
         raise HTTPException(status_code=422, detail="reading is too old to ingest")
     if age < -60:
         raise HTTPException(status_code=422, detail="reading timestamp is too far in the future")
+
+
+def _paid_endpoint(settings: Settings) -> str:
+    return "/temperature/latest" if settings.enable_cloud_collector else "/temperature"
+
+
+def _paid_endpoint_label(settings: Settings) -> str:
+    return f"GET {_paid_endpoint(settings)}"
+
+
+def _install_openapi_metadata(app: FastAPI, settings: Settings) -> None:
+    paid_path = _paid_endpoint(settings)
+
+    def custom_openapi() -> dict[str, object]:
+        if app.openapi_schema:
+            return app.openapi_schema
+        schema = get_openapi(
+            title=app.title,
+            version=app.version,
+            description=app.description,
+            routes=app.routes,
+        )
+        info = schema.setdefault("info", {})
+        info["x-guidance"] = (
+            "Use this service when an agent needs a fresh hyperlocal temperature reading. "
+            "The edge architecture sells GET /temperature directly from the sensor service. "
+            "The cloud architecture sells GET /temperature/latest from the latest authenticated station post. "
+            "Check read_at, age_seconds, ttl_seconds, and stale before relying on the value."
+        )
+        paid_operation = schema.get("paths", {}).get(paid_path, {}).get("get")
+        if paid_operation is not None:
+            paid_operation["x-payment-info"] = {
+                "price": {"amount": settings.x402_price_usd, "currency": "USD"},
+                "protocols": [
+                    {
+                        "name": "x402",
+                        "network": settings.x402_network,
+                        "asset": "USDC",
+                        "sellerAddress": settings.pay_to_evm_address or "configured-at-proxy",
+                    }
+                ],
+            }
+        app.openapi_schema = schema
+        return app.openapi_schema
+
+    app.openapi = custom_openapi
 
 
 def create_app(settings: Settings | None = None, sensor: TemperatureSensor | None = None) -> FastAPI:
@@ -154,7 +201,8 @@ def create_app(settings: Settings | None = None, sensor: TemperatureSensor | Non
         return {
             "name": "x402 Temperature Server",
             "station": settings.station_id,
-            "paid_endpoint": "GET /temperature",
+            "architecture": "cloud-collector" if settings.enable_cloud_collector else "self-contained-edge",
+            "paid_endpoint": _paid_endpoint_label(settings),
             "price_usd": settings.x402_price_usd,
             "network": settings.x402_network,
             "ttl_seconds": settings.reading_ttl_seconds,
@@ -170,6 +218,8 @@ def create_app(settings: Settings | None = None, sensor: TemperatureSensor | Non
 
     if settings.enable_x402:
         install_x402(app, settings)
+
+    _install_openapi_metadata(app, settings)
 
     return app
 

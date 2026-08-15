@@ -5,7 +5,7 @@ This file captures the recommendations folded into the public build packet and t
 ## Recommended Build Sequence
 
 1. Build the wired Raspberry Pi Zero 2 W + BME280 prototype.
-2. Verify local readings with the mock sensor and then with the real BME280.
+2. Verify local readings with the simulated sensor and then with the real BME280.
 3. Run the cloud collector on a cheap VPS and have the Pi post readings to it.
 4. Put the x402 payment layer in front of the cloud collector's latest-reading endpoint.
 5. Add the self-contained Pi seller as a second reference design.
@@ -35,6 +35,17 @@ Accepted implementation:
 - The direct `/temperature` route remains the live local sensor path.
 - The docs describe a public HTTPS route into a Pi-hosted x402 proxy.
 - The recommended payment layer remains a thin Node/Express Circle Gateway proxy in front of the Python sensor service.
+- The local proxy can run in `mock` mode for offline 402/paid-200 tests or `circle` mode for real Gateway settlement.
+
+### Simulate The Sensor Until Hardware Arrives
+
+The first software demo should not wait on the physical BME280.
+
+Accepted implementation:
+
+- `SENSOR_BACKEND=simulated` is the default.
+- The simulated backend produces a daily temperature curve with small configurable noise.
+- The deterministic `mock` backend remains available for unit tests.
 
 ### Publish Freshness Metadata
 
@@ -62,9 +73,9 @@ Accepted implementation:
 
 The included collector uses in-memory storage so it remains easy to run and understand. Production should use SQLite, Postgres, Redis, or a small JSON-backed store so readings survive process restarts.
 
-### Full Circle Gateway Seller Proxy
+### Real Paid Circle Gateway Buyer Test
 
-The Python app remains the sensor and collector layer. The production seller should add a thin Node/Express Circle Gateway Nanopayments proxy that protects the paid route and forwards successful paid requests to the Python app.
+The repo includes the Node/Express Gateway proxy and verifies its local payment contract in mock mode. The next deferred step is a real buyer-wallet estimate and paid call against `X402_GATEWAY_MODE=circle`, after Darryl explicitly approves the amount, seller address, chain/network, and public URL.
 
 ### Battery Telemetry Hardware
 

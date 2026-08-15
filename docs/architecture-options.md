@@ -8,6 +8,8 @@ This project supports two production designs. They use the same sensor code, but
 
 In this design the Raspberry Pi is a private sensor node. It reads the BME280 or DS18B20 and periodically posts a signed reading to a small cloud service. The cloud service stores the latest reading and exposes the paid x402 endpoint.
 
+For the current no-hardware demo, the Pi role can be simulated with `SENSOR_BACKEND=simulated` and a scripted `POST /sensor-readings`. The contract is the same: the cloud endpoint sells the latest posted reading and includes freshness metadata.
+
 ```text
 Raspberry Pi sensor node
   -> HTTPS POST /sensor-readings
@@ -63,6 +65,7 @@ Recommendation: use RackNerd for the working reference design. It is cheap enoug
   - Returns the latest valid reading for a station.
   - Includes `read_at`, `age_seconds`, and `stale` so buyers know whether the reading is fresh.
   - Included in this repo as an in-memory reference endpoint.
+  - In the recommended Circle Gateway path, exposed through the Node proxy with `ARCHITECTURE=cloud`.
 
 - `GET /health`
   - Free.
@@ -121,6 +124,8 @@ Public HTTPS
 
 This keeps the Python sensor service simple while using Circle's current seller middleware for x402 settlement.
 
+For the local no-hardware demo, this design uses `SENSOR_BACKEND=simulated`, the Python app returns a live simulated reading from `GET /temperature`, and the proxy protects that route with `ARCHITECTURE=edge`.
+
 ## Recommendation
 
 Build both, but sequence them:
@@ -131,3 +136,14 @@ Build both, but sequence them:
 4. Compare uptime, paid-call success rate, and freshness across both.
 
 The cloud option is the stronger production pattern. The self-contained option is the stronger story.
+
+## Local Architecture Test
+
+From the repository root:
+
+```bash
+cd proxy && npm install && cd ..
+./scripts/test-both-architectures.sh
+```
+
+The test starts both designs locally, verifies that unpaid paid-route calls return `402 Payment Required`, then verifies that the local mock payment path returns `200` and the protected JSON payload. This does not move USDC; it is the pre-flight contract test before a real Circle Gateway buyer-wallet estimate.

@@ -26,6 +26,13 @@ def install_x402(app: FastAPI, settings: Settings) -> None:
     server = x402ResourceServer(facilitator)
     server.register(settings.x402_network, ExactEvmServerScheme())
 
+    paid_path = "/temperature/latest" if settings.enable_cloud_collector else "/temperature"
+    paid_description = (
+        f"Latest posted temperature reading from {settings.location_label}"
+        if settings.enable_cloud_collector
+        else f"Live temperature reading from {settings.location_label}"
+    )
+
     route = RouteConfig(
         accepts=[
             PaymentOption(
@@ -38,8 +45,8 @@ def install_x402(app: FastAPI, settings: Settings) -> None:
         ],
         resource=Resource(
             method="GET",
-            path="/temperature",
-            description=f"Live temperature reading from {settings.location_label}",
+            path=paid_path,
+            description=paid_description,
         ),
         extensions=[
             discoverable(
@@ -61,5 +68,4 @@ def install_x402(app: FastAPI, settings: Settings) -> None:
         ],
     )
 
-    app.add_middleware(PaymentMiddlewareASGI, routes={"GET /temperature": route}, server=server)
-
+    app.add_middleware(PaymentMiddlewareASGI, routes={f"GET {paid_path}": route}, server=server)

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from glob import glob
+import math
+import random
 from pathlib import Path
 
 from .config import Settings
@@ -23,6 +25,35 @@ class TemperatureSensor:
 class MockSensor(TemperatureSensor):
     def read(self) -> SensorReading:
         return SensorReading(celsius=21.42, humidity=48.3, pressure_hpa=1013.2)
+
+
+class SimulatedSensor(TemperatureSensor):
+    def __init__(
+        self,
+        base_celsius: float,
+        daily_swing_celsius: float,
+        noise_celsius: float,
+        humidity: float,
+        pressure_hpa: float,
+    ):
+        self._base_celsius = base_celsius
+        self._daily_swing_celsius = daily_swing_celsius
+        self._noise_celsius = noise_celsius
+        self._humidity = humidity
+        self._pressure_hpa = pressure_hpa
+
+    def read(self) -> SensorReading:
+        now = datetime.now(timezone.utc)
+        seconds_since_midnight = now.hour * 3600 + now.minute * 60 + now.second
+        day_fraction = seconds_since_midnight / 86400
+        daily_curve = math.sin((day_fraction - 0.25) * math.tau)
+        noise = random.uniform(-self._noise_celsius, self._noise_celsius)
+        celsius = self._base_celsius + (daily_curve * self._daily_swing_celsius) + noise
+        return SensorReading(
+            celsius=celsius,
+            humidity=self._humidity,
+            pressure_hpa=self._pressure_hpa,
+        )
 
 
 class Bme280Sensor(TemperatureSensor):
@@ -61,6 +92,14 @@ def build_sensor(settings: Settings) -> TemperatureSensor:
     backend = settings.sensor_backend.lower()
     if backend == "mock":
         return MockSensor()
+    if backend == "simulated":
+        return SimulatedSensor(
+            base_celsius=settings.simulated_base_celsius,
+            daily_swing_celsius=settings.simulated_daily_swing_celsius,
+            noise_celsius=settings.simulated_noise_celsius,
+            humidity=settings.simulated_humidity,
+            pressure_hpa=settings.simulated_pressure_hpa,
+        )
     if backend == "bme280":
         return Bme280Sensor(settings.i2c_address)
     if backend == "ds18b20":
@@ -70,4 +109,3 @@ def build_sensor(settings: Settings) -> TemperatureSensor:
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-

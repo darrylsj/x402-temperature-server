@@ -22,12 +22,17 @@ def _int(name: str, default: int) -> int:
 
 @dataclass(frozen=True)
 class Settings:
-    sensor_backend: str = "mock"
+    sensor_backend: str = "simulated"
     station_id: str = "roof-demo-01"
     location_label: str = "Neighborhood station"
     latitude: float = 37.33
     longitude: float = -121.89
     reading_ttl_seconds: int = 60
+    simulated_base_celsius: float = 21.4
+    simulated_daily_swing_celsius: float = 3.2
+    simulated_noise_celsius: float = 0.35
+    simulated_humidity: float = 48.3
+    simulated_pressure_hpa: float = 1013.2
     i2c_address: int = 0x76
     ds18b20_device_glob: str = "/sys/bus/w1/devices/28-*/w1_slave"
     enable_x402: bool = False
@@ -41,12 +46,17 @@ class Settings:
     @classmethod
     def from_env(cls) -> "Settings":
         return cls(
-            sensor_backend=os.getenv("SENSOR_BACKEND", "mock"),
+            sensor_backend=os.getenv("SENSOR_BACKEND", "simulated"),
             station_id=os.getenv("STATION_ID", "roof-demo-01"),
             location_label=os.getenv("LOCATION_LABEL", "Neighborhood station"),
             latitude=_float("LATITUDE", 37.33),
             longitude=_float("LONGITUDE", -121.89),
             reading_ttl_seconds=_int("READING_TTL_SECONDS", 60),
+            simulated_base_celsius=_float("SIMULATED_BASE_CELSIUS", 21.4),
+            simulated_daily_swing_celsius=_float("SIMULATED_DAILY_SWING_CELSIUS", 3.2),
+            simulated_noise_celsius=_float("SIMULATED_NOISE_CELSIUS", 0.35),
+            simulated_humidity=_float("SIMULATED_HUMIDITY", 48.3),
+            simulated_pressure_hpa=_float("SIMULATED_PRESSURE_HPA", 1013.2),
             i2c_address=int(os.getenv("I2C_ADDRESS", "0x76"), 0),
             ds18b20_device_glob=os.getenv("DS18B20_DEVICE_GLOB", "/sys/bus/w1/devices/28-*/w1_slave"),
             enable_x402=_bool(os.getenv("ENABLE_X402"), False),

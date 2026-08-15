@@ -4,6 +4,8 @@ Build a small Raspberry Pi weather station that sells live hyperlocal temperatur
 
 This is the companion implementation for the weather-bot chapter of *The x402 Handbook*. The book explains the idea. This repo is the build packet: hardware list, wiring diagrams, Raspberry Pi setup, sensor backends, tests, sample output, service setup, cloud and edge deployment options, solar power option, and x402 production notes.
 
+No physical sensor is required for the first demo. The default `simulated` backend produces realistic temperature, humidity, and pressure readings so the API and x402 payment flow can be tested before the BME280 arrives.
+
 ![Raspberry Pi Zero 2 W connected to a BME280 sensor over I2C](docs/images/pi-zero-2w-bme280-wiring.jpg)
 
 ## Repository Status
@@ -11,9 +13,9 @@ This is the companion implementation for the weather-bot chapter of *The x402 Ha
 - Public repo: <https://github.com/darrylsj/x402-temperature-server>
 - License: MIT
 - Runtime: Python 3.10+ with FastAPI
-- Supported sensors: mock, BME280, DS18B20
-- Current tests: `7` offline tests
-- Default mode: local mock sensor, x402 disabled
+- Supported sensors: simulated, mock, BME280, DS18B20
+- Current tests: Python API tests plus Node proxy architecture tests
+- Default mode: local simulated sensor, x402 disabled
 
 ## What It Sells
 
@@ -143,12 +145,12 @@ Accepted:
 Deferred:
 
 - Persistent cloud storage. The included collector is intentionally in-memory for the first runnable demo; use SQLite, Postgres, Redis, or a small JSON-backed store before treating it as production.
-- A full Node/Express Circle Gateway proxy. The docs describe the recommended production shape, while this Python app remains the sensor and collector layer.
+- A real paid Circle Gateway buyer-wallet test. The included proxy can run in Circle mode, but local verification uses mock mode so it does not move USDC.
 - Low-power battery control. The docs recommend it, but the first hardware order does not include battery telemetry hardware.
 
 ## Local Quick Start
 
-Run the app on a development machine with the mock sensor:
+Run the app on a development machine with the simulated sensor:
 
 ```bash
 python3 -m venv .venv
@@ -211,6 +213,27 @@ python -m x402_temperature_server
 
 For the current Circle Gateway Nanopayments seller path, the recommended production approach is a thin Node/Express payment proxy in front of the Python sensor service. The Python app remains the sensor and payload layer; the proxy handles x402 payment negotiation and settlement.
 
+Install and test the proxy:
+
+```bash
+cd proxy
+npm install
+npm test
+```
+
+Run the local mock-payment architecture test:
+
+```bash
+./scripts/test-both-architectures.sh
+```
+
+That script starts:
+
+- an edge Python sensor service plus a mock x402 proxy protecting `GET /temperature`;
+- a cloud collector Python service plus a mock x402 proxy protecting `GET /temperature/latest`.
+
+Each paid route must return `402 Payment Required` when unpaid and `200` when the local test payment header is present. The mock mode proves the HTTP contract without moving USDC. For a real Circle Gateway test, set `X402_GATEWAY_MODE=circle`, `SELLER_ADDRESS`, `FACILITATOR_URL`, and run a buyer-wallet estimate before making any paid call.
+
 The older direct FastAPI x402 switch remains in this repo as an educational path:
 
 ```bash
@@ -228,6 +251,8 @@ Production verification checklist:
 4. Response includes `read_at`, `ttl_seconds`, and rounded coordinates.
 5. Buyer can tell whether the reading is fresh or stale.
 6. No secrets are committed.
+
+The direct FastAPI x402 path gates `GET /temperature` in self-contained mode and `GET /temperature/latest` in cloud collector mode. The Gateway proxy is still the preferred seller path for production.
 
 ## Cloud Collector Mode
 
@@ -304,15 +329,21 @@ Current tests cover:
 - health endpoint
 - temperature payload shape in mock mode
 - rounded coordinates for privacy
+- simulated sensor mode
 - free discovery manifest
 - cloud collector ingest and latest-reading endpoint
 - cloud collector station-token and old-reading rejection
+- mock Gateway proxy tests for the self-contained edge route
+- mock Gateway proxy tests for the cloud collector route
 
 ## File Map
 
 - `src/x402_temperature_server/app.py` - FastAPI app and routes
-- `src/x402_temperature_server/sensors.py` - mock, BME280, and DS18B20 sensor backends
+- `src/x402_temperature_server/sensors.py` - simulated, mock, BME280, and DS18B20 sensor backends
 - `src/x402_temperature_server/payment.py` - optional direct x402 middleware installation
+- `proxy/src/server.mjs` - Node/Express Circle Gateway proxy for the paid route
+- `proxy/test/architectures.test.mjs` - proxy tests for cloud and edge modes
+- `scripts/test-both-architectures.sh` - starts both local architectures and verifies 402/paid-200 behavior
 - `docs/hardware-ordering.md` - ordering list and shopping notes
 - `docs/hardware-diagrams.md` - wiring diagrams
 - `docs/software-runbook.md` - Pi and service setup
