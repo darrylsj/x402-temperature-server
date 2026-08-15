@@ -24,6 +24,7 @@ def test_health() -> None:
         "ok": True,
         "station": "roof-test-01",
         "paid_route": False,
+        "x402_mode": "off",
         "collector": False,
     }
 
@@ -76,6 +77,7 @@ def test_mock_x402_gates_edge_route_without_payment() -> None:
     paid = test_client.get("/temperature", headers={"x-payment": "test-paid"})
     assert paid.status_code == 200
     assert paid.headers["x-payment-verified"] == "true"
+    assert test_client.get("/health").json()["x402_mode"] == "mock"
 
 
 def test_simulated_sensor_payload_is_environmental() -> None:

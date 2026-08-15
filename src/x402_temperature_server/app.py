@@ -182,7 +182,8 @@ def create_app(settings: Settings | None = None, sensor: TemperatureSensor | Non
         return {
             "ok": True,
             "station": settings.station_id,
-            "paid_route": settings.enable_x402,
+            "paid_route": settings.enable_x402 or settings.enable_mock_x402,
+            "x402_mode": "mock" if settings.enable_mock_x402 else ("direct" if settings.enable_x402 else "off"),
             "collector": settings.enable_cloud_collector,
         }
 
