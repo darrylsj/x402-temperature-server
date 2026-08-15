@@ -217,6 +217,16 @@ npm start
 
 An unpaid call to `GET /temperature` returns `402`; a local test call with `x-payment: test-paid` returns the forwarded JSON. Use `X402_GATEWAY_MODE=circle` only for a real Circle Gateway test after confirming the seller address, chain/network, URL, and amount.
 
+If the sample host does not have Node, use the Python mock gate:
+
+```bash
+ENABLE_MOCK_X402=true python -m x402_temperature_server
+curl -i http://127.0.0.1:8080/temperature
+curl -H 'x-payment: test-paid' http://127.0.0.1:8080/temperature
+```
+
+This proves the same unpaid-402 and paid-200 endpoint contract without installing Node or moving USDC.
+
 Ingress options:
 
 - Cloudflare Tunnel

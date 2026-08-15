@@ -64,6 +64,20 @@ def test_openapi_marks_paid_edge_operation_for_agents() -> None:
     assert payment_info["protocols"][0]["name"] == "x402"
 
 
+def test_mock_x402_gates_edge_route_without_payment() -> None:
+    settings = Settings(enable_mock_x402=True)
+    test_client = TestClient(create_app(settings=settings, sensor=MockSensor()))
+
+    unpaid = test_client.get("/temperature")
+    assert unpaid.status_code == 402
+    assert unpaid.json()["resource"]["path"] == "/temperature"
+    assert "payment-required" in unpaid.headers
+
+    paid = test_client.get("/temperature", headers={"x-payment": "test-paid"})
+    assert paid.status_code == 200
+    assert paid.headers["x-payment-verified"] == "true"
+
+
 def test_simulated_sensor_payload_is_environmental() -> None:
     settings = Settings(
         sensor_backend="simulated",
@@ -122,6 +136,14 @@ def test_cloud_collector_ingest_and_latest() -> None:
     assert manifest["paid_endpoint"] == "GET /temperature/latest"
     openapi = test_client.get("/openapi.json").json()
     assert "x-payment-info" in openapi["paths"]["/temperature/latest"]["get"]
+
+
+def test_mock_x402_gates_cloud_route_without_payment() -> None:
+    settings = Settings(enable_cloud_collector=True, enable_mock_x402=True, station_ingest_token="secret")
+    test_client = TestClient(create_app(settings=settings, sensor=MockSensor()))
+    unpaid = test_client.get("/temperature/latest")
+    assert unpaid.status_code == 402
+    assert unpaid.json()["resource"]["path"] == "/temperature/latest"
 
 
 def test_cloud_collector_rejects_bad_token() -> None:

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import base64
 from datetime import datetime, timezone
+import json
 
-from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
 from pydantic import BaseModel, Field
 
@@ -116,6 +119,52 @@ def _install_openapi_metadata(app: FastAPI, settings: Settings) -> None:
     app.openapi = custom_openapi
 
 
+def _payment_required_body(settings: Settings) -> dict[str, object]:
+    paid_path = _paid_endpoint(settings)
+    return {
+        "x402Version": 2,
+        "resource": {
+            "method": "GET",
+            "path": paid_path,
+            "description": (
+                "Latest posted simulated temperature reading from the cloud collector."
+                if settings.enable_cloud_collector
+                else "Live simulated temperature reading from the edge sensor."
+            ),
+            "mimeType": "application/json",
+        },
+        "accepts": [
+            {
+                "scheme": "exact",
+                "network": settings.x402_network,
+                "asset": "USDC",
+                "amount": settings.x402_price_usd,
+                "payTo": settings.pay_to_evm_address or "configured-at-proxy",
+            }
+        ],
+    }
+
+
+def _install_mock_x402(app: FastAPI, settings: Settings) -> None:
+    paid_path = _paid_endpoint(settings)
+
+    @app.middleware("http")
+    async def mock_x402_gate(request: Request, call_next):
+        if request.method == "GET" and request.url.path == paid_path:
+            payment = request.headers.get("x-payment") or request.headers.get("payment")
+            if payment != "test-paid":
+                body = _payment_required_body(settings)
+                return JSONResponse(
+                    status_code=402,
+                    content=body,
+                    headers={"payment-required": base64.b64encode(json.dumps(body).encode()).decode()},
+                )
+            response = await call_next(request)
+            response.headers["x-payment-verified"] = "true"
+            return response
+        return await call_next(request)
+
+
 def create_app(settings: Settings | None = None, sensor: TemperatureSensor | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     sensor = sensor or build_sensor(settings)
@@ -216,7 +265,9 @@ def create_app(settings: Settings | None = None, sensor: TemperatureSensor | Non
             },
         }
 
-    if settings.enable_x402:
+    if settings.enable_mock_x402:
+        _install_mock_x402(app, settings)
+    elif settings.enable_x402:
         install_x402(app, settings)
 
     _install_openapi_metadata(app, settings)

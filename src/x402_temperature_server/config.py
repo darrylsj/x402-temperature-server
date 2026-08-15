@@ -36,6 +36,7 @@ class Settings:
     i2c_address: int = 0x76
     ds18b20_device_glob: str = "/sys/bus/w1/devices/28-*/w1_slave"
     enable_x402: bool = False
+    enable_mock_x402: bool = False
     x402_price_usd: str = "0.001"
     x402_network: str = "base"
     pay_to_evm_address: str = ""
@@ -60,6 +61,7 @@ class Settings:
             i2c_address=int(os.getenv("I2C_ADDRESS", "0x76"), 0),
             ds18b20_device_glob=os.getenv("DS18B20_DEVICE_GLOB", "/sys/bus/w1/devices/28-*/w1_slave"),
             enable_x402=_bool(os.getenv("ENABLE_X402"), False),
+            enable_mock_x402=_bool(os.getenv("ENABLE_MOCK_X402"), False),
             x402_price_usd=os.getenv("X402_PRICE_USD", "0.001"),
             x402_network=os.getenv("X402_NETWORK", "base"),
             pay_to_evm_address=os.getenv("PAY_TO_EVM_ADDRESS", ""),

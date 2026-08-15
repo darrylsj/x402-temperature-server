@@ -234,6 +234,16 @@ That script starts:
 
 Each paid route must return `402 Payment Required` when unpaid and `200` when the local test payment header is present. The mock mode proves the HTTP contract without moving USDC. For a real Circle Gateway test, set `X402_GATEWAY_MODE=circle`, `SELLER_ADDRESS`, `FACILITATOR_URL`, and run a buyer-wallet estimate before making any paid call.
 
+For a tiny sample host with no Node runtime, the Python app also includes a mock x402 gate:
+
+```bash
+ENABLE_MOCK_X402=true python -m x402_temperature_server
+curl -i http://127.0.0.1:8080/temperature
+curl -H 'x-payment: test-paid' http://127.0.0.1:8080/temperature
+```
+
+This mode is only for endpoint/demo testing. The Node/Express Gateway proxy remains the production seller path.
+
 The older direct FastAPI x402 switch remains in this repo as an educational path:
 
 ```bash
