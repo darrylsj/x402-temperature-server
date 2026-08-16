@@ -21,15 +21,15 @@ Current live deployment:
 
 ```text
 x402host Raspberry Pi on the home LAN
-  -> publishes simulated Danville readings every minute
+  -> publishes public Danville weather readings hourly
   -> https://x402-temperature.ngrok.app/sensor-readings
   -> SIM cloud server collector
-  -> paid cloud route: GET /temperature/latest
+  -> paid cloud route: GET /temperature/latest through Circle Gateway
 ```
 
-The SIM cloud server keeps the Python collector and Node Gateway proxy bound to localhost; ngrok provides the public HTTPS entrypoint.
+The SIM cloud server keeps the Python collector and Node payment proxy bound to localhost; ngrok provides the public HTTPS entrypoint.
 
-For real seller testing, this URL should point at the Node/Express Circle Gateway proxy, not directly at the Python mock gate:
+For real cloud seller testing, this URL should point at the Node/Express Circle Gateway proxy, not directly at the Python mock gate:
 
 ```text
 ngrok HTTPS
@@ -52,12 +52,25 @@ For the direct edge architecture, a separate public endpoint fronts the edge pro
 ```text
 ngrok HTTPS at https://x402-temperature-edge.ngrok.app
   -> ngrok agent on the Mac
-  -> Node/Express Circle Gateway proxy on 127.0.0.1:3091
+  -> Node/Express Coinbase CDP x402 proxy on 127.0.0.1:3091
   -> SSH forward on 127.0.0.1:18080
   -> x402host Pi edge service on 127.0.0.1:8080
 ```
 
-Because the current edge station is simulated, the public edge proxy runs with `FORWARD_MOCK_PAYMENT=true`. Circle Gateway verifies the buyer payment at the public proxy, then the proxy forwards `x-payment: test-paid` to the Pi's local mock gate so the simulated sensor service does not issue a second local challenge.
+Because the current edge station is simulated, the public edge proxy runs with `FORWARD_MOCK_PAYMENT=true`. The public facilitator verifies the buyer payment at the proxy, then the proxy forwards `x-payment: test-paid` to the Pi's local mock gate so the simulated sensor service does not issue a second local challenge.
+
+## Facilitator Split
+
+This repo intentionally keeps the two public architectures on different hosted facilitator paths:
+
+| Public URL | Architecture | Facilitator | Why |
+| --- | --- | --- | --- |
+| `https://x402-temperature.ngrok.app` | SIM cloud collector | Circle Gateway Nanopayments | Best fit for tiny high-frequency USDC calls with Gateway balance and batched settlement. |
+| `https://x402-temperature-edge.ngrok.app` | Direct Pi/edge route | Coinbase CDP x402 Facilitator | Best fit for the classic hosted x402 facilitator path: signed payment, hosted verification/screening, onchain settlement, then resource delivery. |
+
+Do not treat these as interchangeable when debugging. Circle buyer tests use the Circle CLI and Gateway balances. Coinbase seller tests use a CDP API key ID/secret plus a seller EVM address. Coinbase buyer tests use CDP wallet credentials and the x402 fetch/client packages.
+
+Operational gate: the cloud/SIM Circle path is live and has completed real testnet paid calls. The edge/Pi Coinbase path is implemented in the repo, but the public edge tunnel is only cleanly on Coinbase after the edge proxy starts with current CDP x402 credentials and `/.well-known/x402-temperature.json` reports `"gateway_mode": "coinbase"`. If the manifest still reports `"circle"`, the edge URL is reachable but not yet running the Coinbase facilitator.
 
 The Pi publishes readings to the cloud collector through the public endpoint:
 
@@ -157,13 +170,38 @@ The unpaid paid route should return `402 Payment Required` with Circle Gateway p
 curl -i -H 'ngrok-skip-browser-warning: true' "$URL/temperature/latest"
 ```
 
-Circle's read-only inspect command should report the endpoint as payable:
+Circle's read-only inspect command should report the cloud endpoint as payable:
 
 ```bash
 circle services inspect "$URL/temperature/latest" --output json
 ```
 
 For the confirmed paid buyer test flow, see [Paid Buyer Test](paid-buyer-test.md). The first successful 50-call run used Polygon Amoy testnet Gateway balance and completed 50 paid purchases with zero failures.
+
+For the Coinbase edge path:
+
+```bash
+EDGE_URL='https://x402-temperature-edge.ngrok.app'
+curl -H 'ngrok-skip-browser-warning: true' "$EDGE_URL/health"
+curl -i -H 'ngrok-skip-browser-warning: true' "$EDGE_URL/temperature"
+curl -H 'ngrok-skip-browser-warning: true' "$EDGE_URL/.well-known/x402-temperature.json"
+cd proxy
+CDP_API_KEY_ID=... \
+CDP_API_KEY_SECRET=... \
+CDP_WALLET_SECRET=... \
+CDP_X402_ENVIRONMENT=development \
+node scripts/pay-coinbase-client.mjs "$EDGE_URL/temperature"
+```
+
+Coinbase's seller SDK requires the full package set from the current docs: `@coinbase/cdp-sdk`, `@x402/core`, `@x402/evm`, `@x402/svm`, `@x402/extensions`, `@x402/express`, and for buyer tests `@x402/fetch`. Even an EVM-only seller import can require the Solana package to be installed because the CDP server helper loads the default supported scheme set.
+
+For the seller side, this repo uses Coinbase's direct-address receiver mode:
+
+```js
+payToConfig: { type: "address", evm: process.env.SELLER_ADDRESS }
+```
+
+That keeps seller setup simpler: `CDP_WALLET_SECRET` is not required for the server to receive into an existing EVM address. The CDP API key ID and secret are still required because the hosted facilitator must authenticate verification and settlement calls.
 
 The `ngrok-skip-browser-warning` header is useful for automated agents and scripts that should bypass ngrok's browser interstitial. The `x-payment: test-paid` header only works in local mock mode; it is not a real payment.
 
@@ -183,9 +221,9 @@ Do not expose the Pi directly on plain HTTP for a real seller endpoint. Put TLS,
 The mock Python x402 mode proves the HTTP contract but does not settle USDC. A real outside-LAN purchase needs:
 
 1. A stable public HTTPS URL.
-2. The Node/Express Circle Gateway proxy in front of the Python sensor service.
-3. A configured seller receive address.
+2. The Node/Express payment proxy in front of the Python sensor service.
+3. A configured facilitator path and seller receive mechanism.
 4. A real unpaid `402` challenge with current accepted networks and price.
 5. A buyer-wallet estimate before any paid test call.
 
-Confirmed USDC payments are irreversible. Keep first paid tests on testnet where possible, or ask for explicit approval before moving real funds. Polygon Amoy is the fastest verified testnet buyer path for demos. Base Sepolia also works, but Gateway balance does not become available until Circle's required finality window has passed; always poll `circle gateway balance` before paying.
+Confirmed USDC payments are irreversible. Keep first paid tests on testnet where possible, or ask for explicit approval before moving real funds. Polygon Amoy is the fastest verified Circle testnet buyer path for demos. Base Sepolia also works, but Gateway balance does not become available until Circle's required finality window has passed; always poll `circle gateway balance` before paying.

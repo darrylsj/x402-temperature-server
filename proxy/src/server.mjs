@@ -1,7 +1,7 @@
 import express from "express";
 
 const ARCHITECTURES = new Set(["cloud", "edge"]);
-const GATEWAY_MODES = new Set(["mock", "circle"]);
+const GATEWAY_MODES = new Set(["mock", "circle", "coinbase"]);
 
 export function loadConfig(env = process.env) {
   const architecture = env.ARCHITECTURE || "edge";
@@ -10,7 +10,7 @@ export function loadConfig(env = process.env) {
     throw new Error("ARCHITECTURE must be cloud or edge");
   }
   if (!GATEWAY_MODES.has(gatewayMode)) {
-    throw new Error("X402_GATEWAY_MODE must be mock or circle");
+    throw new Error("X402_GATEWAY_MODE must be mock, circle, or coinbase");
   }
   return {
     architecture,
@@ -23,6 +23,7 @@ export function loadConfig(env = process.env) {
     facilitatorUrl: env.FACILITATOR_URL || "https://gateway-api-testnet.circle.com",
     publicBaseUrl: env.PUBLIC_BASE_URL || "",
     forwardMockPayment: env.FORWARD_MOCK_PAYMENT === "true",
+    coinbaseEnvironment: env.CDP_X402_ENVIRONMENT || "development",
   };
 }
 
@@ -86,11 +87,24 @@ function escapeHtml(value) {
 
 function demoPage(config, publicBaseUrl, path) {
   const paidUrl = new URL(path, publicBaseUrl).toString();
-  const chain = config.gatewayMode === "circle" ? "MATIC-AMOY" : "mock";
+  const facilitatorLabel =
+    config.gatewayMode === "circle"
+      ? "Circle Gateway"
+      : config.gatewayMode === "coinbase"
+        ? "Coinbase CDP"
+        : "local mock";
+  const paymentDescription =
+    config.gatewayMode === "circle"
+      ? "Circle Gateway payment proof"
+      : config.gatewayMode === "coinbase"
+        ? "Coinbase CDP x402 payment proof"
+        : "local mock payment header";
   const payCommand =
     config.gatewayMode === "circle"
-      ? `circle services pay ${paidUrl} -X GET --address "$BUYER_ADDRESS" --chain ${chain} --max-amount ${config.priceUsd} --output json`
-      : `curl -H 'x-payment: test-paid' ${paidUrl}`;
+      ? `circle services pay ${paidUrl} -X GET --address "$BUYER_ADDRESS" --chain MATIC-AMOY --max-amount ${config.priceUsd} --output json`
+      : config.gatewayMode === "coinbase"
+        ? `CDP_API_KEY_ID=... CDP_API_KEY_SECRET=... CDP_WALLET_SECRET=... node scripts/pay-coinbase-client.mjs ${paidUrl}`
+        : `curl -H 'x-payment: test-paid' ${paidUrl}`;
 
   return `<!doctype html>
 <html lang="en">
@@ -126,10 +140,10 @@ function demoPage(config, publicBaseUrl, path) {
 <body>
   <main>
     <h1>x402 Temperature Public Demo</h1>
-    <p>This page is public and free. The temperature payload is protected by x402 and returns <code>402 Payment Required</code> until a buyer agent sends valid Circle Gateway payment proof.</p>
+    <p>This page is public and free. The temperature payload is protected by x402 and returns <code>402 Payment Required</code> until a buyer agent sends valid ${escapeHtml(paymentDescription)}.</p>
     <div class="meta">
       <div class="tile"><div class="label">Architecture</div><div class="value">${escapeHtml(config.architecture)}</div></div>
-      <div class="tile"><div class="label">Gateway Mode</div><div class="value">${escapeHtml(config.gatewayMode)}</div></div>
+      <div class="tile"><div class="label">Facilitator</div><div class="value">${escapeHtml(facilitatorLabel)}</div></div>
       <div class="tile"><div class="label">Price</div><div class="value">${escapeHtml(config.priceUsd)} USDC</div></div>
       <div class="tile"><div class="label">Paid Route</div><div class="value">GET ${escapeHtml(path)}</div></div>
     </div>
@@ -174,17 +188,59 @@ function demoPage(config, publicBaseUrl, path) {
 
 async function paymentGate(config, path) {
   if (config.gatewayMode === "mock") {
-    return mockPaymentGate(config, path);
+    return { install: "route", middleware: mockPaymentGate(config, path), paymentInfo: null };
+  }
+  if (config.gatewayMode === "circle") {
+    if (!/^0x[a-fA-F0-9]{40}$/.test(config.sellerAddress)) {
+    throw new Error("SELLER_ADDRESS must be a valid EVM address in circle mode");
+    }
+    const { createGatewayMiddleware } = await import("@circle-fin/x402-batching/server");
+    const gateway = createGatewayMiddleware({
+      sellerAddress: config.sellerAddress,
+      facilitatorUrl: config.facilitatorUrl,
+    });
+    return {
+      install: "route",
+      middleware: gateway.require(`$${config.priceUsd}`),
+      paymentInfo: {
+        facilitator: "Circle Gateway",
+        scheme: "GatewayWalletBatched",
+        facilitator_url: config.facilitatorUrl,
+        seller_address: config.sellerAddress,
+      },
+    };
   }
   if (!/^0x[a-fA-F0-9]{40}$/.test(config.sellerAddress)) {
-    throw new Error("SELLER_ADDRESS must be a valid EVM address in circle mode");
+    throw new Error("SELLER_ADDRESS must be a valid EVM address in coinbase mode");
   }
-  const { createGatewayMiddleware } = await import("@circle-fin/x402-batching/server");
-  const gateway = createGatewayMiddleware({
-    sellerAddress: config.sellerAddress,
-    facilitatorUrl: config.facilitatorUrl,
+  const { createX402Server } = await import("@coinbase/cdp-sdk/x402");
+  const { paymentMiddlewareFromHTTPServer } = await import("@x402/express");
+  const server = await createX402Server({
+    environment: config.coinbaseEnvironment,
+    payToConfig: {
+      type: "address",
+      evm: config.sellerAddress,
+    },
+    routes: {
+      [`GET ${path}`]: {
+        price: `$${config.priceUsd}`,
+        description:
+          config.architecture === "cloud"
+            ? "Latest Danville weather reading from the cloud collector."
+            : "Live Danville edge weather reading with Raspberry Pi CPU telemetry.",
+      },
+    },
   });
-  return gateway.require(`$${config.priceUsd}`);
+  return {
+    install: "global",
+    middleware: paymentMiddlewareFromHTTPServer(server),
+    paymentInfo: {
+      facilitator: "Coinbase CDP",
+      scheme: "exact",
+      environment: config.coinbaseEnvironment,
+      seller_address: server.payToEvmAddress || config.sellerAddress,
+    },
+  };
 }
 
 async function forwardJson(req, res, config, upstreamPath) {
@@ -225,7 +281,7 @@ async function forwardIngest(req, res, config) {
   res.send(text);
 }
 
-async function forwardManifest(req, res, config) {
+async function forwardManifest(req, res, config, paymentInfo) {
   const upstream = new URL("/.well-known/x402-temperature.json", config.sensorOrigin);
   const response = await fetch(upstream, { headers: { accept: "application/json" } });
   const body = await response.json();
@@ -241,8 +297,14 @@ async function forwardManifest(req, res, config) {
     seller_address: config.sellerAddress,
     payment: {
       gateway_mode: config.gatewayMode,
-      scheme: config.gatewayMode === "circle" ? "GatewayWalletBatched" : "mock",
-      facilitator_url: config.gatewayMode === "circle" ? config.facilitatorUrl : null,
+      scheme:
+        paymentInfo?.scheme ||
+        (config.gatewayMode === "circle" ? "GatewayWalletBatched" : "mock"),
+      facilitator:
+        paymentInfo?.facilitator ||
+        (config.gatewayMode === "circle" ? "Circle Gateway" : "local mock"),
+      facilitator_url: paymentInfo?.facilitator_url || null,
+      environment: paymentInfo?.environment || null,
     },
   });
 }
@@ -252,6 +314,11 @@ export async function createProxyApp(config = loadConfig()) {
   app.use(express.json({ limit: "32kb" }));
   const path = paidPath(config);
   const gate = await paymentGate(config, path);
+  const paymentInfo = gate.paymentInfo;
+
+  if (gate.install === "global") {
+    app.use(gate.middleware);
+  }
 
   app.get("/health", async (req, res, next) => {
     try {
@@ -263,7 +330,7 @@ export async function createProxyApp(config = loadConfig()) {
 
   app.get("/.well-known/x402-temperature.json", async (req, res, next) => {
     try {
-      await forwardManifest(req, res, config);
+      await forwardManifest(req, res, config, paymentInfo);
     } catch (error) {
       next(error);
     }
@@ -296,7 +363,8 @@ export async function createProxyApp(config = loadConfig()) {
     });
   }
 
-  app.get(path, gate, async (req, res, next) => {
+  const routeMiddleware = gate.install === "route" ? [gate.middleware] : [];
+  app.get(path, ...routeMiddleware, async (req, res, next) => {
     try {
       await forwardJson(req, res, config, path);
     } catch (error) {

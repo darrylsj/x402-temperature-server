@@ -3,7 +3,7 @@ import { after, before, describe, it } from "node:test";
 import express from "express";
 import request from "supertest";
 
-import { createProxyApp } from "../src/server.mjs";
+import { createProxyApp, loadConfig } from "../src/server.mjs";
 
 let requireForwardedPayment = false;
 
@@ -179,5 +179,19 @@ describe("mock x402 proxy architectures", () => {
       .set("x-station-token", "wrong")
       .send({ station: "danville-demo-01", celsius: 22.1 });
     assert.equal(rejected.status, 401);
+  });
+
+  it("accepts coinbase as the edge facilitator mode", () => {
+    const config = loadConfig({
+      ARCHITECTURE: "edge",
+      X402_GATEWAY_MODE: "coinbase",
+      SENSOR_ORIGIN: upstream.origin,
+      PRICE_USD: "0.001",
+      PUBLIC_BASE_URL: "https://x402-temperature-edge.example",
+    });
+
+    assert.equal(config.architecture, "edge");
+    assert.equal(config.gatewayMode, "coinbase");
+    assert.equal(config.coinbaseEnvironment, "development");
   });
 });

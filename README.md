@@ -152,6 +152,8 @@ Deferred:
 Confirmed:
 
 - Real Circle Gateway buyer-wallet test. The public SIM cloud seller endpoint completed 50 paid testnet purchases at `0.001` USDC each with zero failures. See [Paid Buyer Test](docs/paid-buyer-test.md).
+- Two public demo URLs. The cloud/SIM route is the Circle Gateway reference design. The direct edge/Pi route is the Coinbase CDP facilitator reference design.
+- Live credential note: the Coinbase edge path is implemented in the proxy and docs, but the public edge deployment must have current CDP x402 API key credentials before it can be switched from Circle to Coinbase. A legacy Coinbase account/trading API key is not a CDP x402 facilitator credential.
 
 ## Local Quick Start
 
@@ -219,7 +221,18 @@ python -m x402_temperature_server
 
 ## x402 Production Mode
 
-For the current Circle Gateway Nanopayments seller path, the recommended production approach is a thin Node/Express payment proxy in front of the Python sensor service. The Python app remains the sensor and payload layer; the proxy handles x402 payment negotiation and settlement.
+For public seller mode, this repo uses a thin Node/Express payment proxy in front of the Python sensor service. The Python app remains the sensor and payload layer; the proxy handles x402 payment negotiation and settlement.
+
+The two reference architectures deliberately use different facilitator paths:
+
+| Architecture | Public demo | Paid route | Facilitator |
+| --- | --- | --- | --- |
+| Cloud collector on SIM | `https://x402-temperature.ngrok.app/demo` | `GET /temperature/latest` | Circle Gateway Nanopayments |
+| Direct edge/Pi path | `https://x402-temperature-edge.ngrok.app/demo` | `GET /temperature` | Coinbase CDP x402 Facilitator |
+
+That split is the point of the field demo: the same paid Danville weather product can be sold through two deployment patterns and two major hosted facilitator paths.
+
+Deployment truth matters here. The cloud/SIM Circle endpoint is already verified with real testnet paid calls. The edge/Pi Coinbase endpoint is the intended second facilitator path, and the code is ready for it, but the public runtime should not be called clean until `X402_GATEWAY_MODE=coinbase` starts successfully with current `CDP_API_KEY_ID` and `CDP_API_KEY_SECRET` values and the public manifest reports `gateway_mode: "coinbase"`.
 
 Install and test the proxy:
 
@@ -240,7 +253,20 @@ That script starts:
 - an edge Python sensor service plus a mock x402 proxy protecting `GET /temperature`;
 - a cloud collector Python service plus a mock x402 proxy protecting `GET /temperature/latest`.
 
-Each paid route must return `402 Payment Required` when unpaid and `200` when the local test payment header is present. The mock mode proves the HTTP contract without moving USDC. For a real Circle Gateway test, set `X402_GATEWAY_MODE=circle`, `SELLER_ADDRESS`, `FACILITATOR_URL`, and run a buyer-wallet estimate before making any paid call.
+Each paid route must return `402 Payment Required` when unpaid and `200` when the local test payment header is present. The mock mode proves the HTTP contract without moving USDC.
+
+For the Circle Gateway path, set `X402_GATEWAY_MODE=circle`, `SELLER_ADDRESS`, `FACILITATOR_URL`, and run a buyer-wallet estimate before making any paid call. Circle Gateway tests require funded Gateway balance on the selected chain. Polygon Amoy credited quickly in the verified run. Base Sepolia also works, but Gateway balance does not appear until Circle's required finality window has passed, so use `scripts/wait-gateway-balance.sh` before paying.
+
+For the Coinbase CDP seller path, set `X402_GATEWAY_MODE=coinbase` and provide the CDP facilitator credentials plus a seller receive address in the runtime environment:
+
+```bash
+CDP_API_KEY_ID=...
+CDP_API_KEY_SECRET=...
+SELLER_ADDRESS=0xYourReceivingWallet
+CDP_X402_ENVIRONMENT=development
+```
+
+This repo uses Coinbase's `payToConfig: { type: "address", evm: SELLER_ADDRESS }` mode, so the seller does not need `CDP_WALLET_SECRET` just to receive through an existing EVM address. The CDP API key ID/secret authenticate the hosted facilitator. The proxy registers only the paid route, so `/health`, `/demo`, `/openapi.json`, and `/.well-known/x402-temperature.json` remain free.
 
 For a tiny sample host with no Node runtime, the Python app also includes a mock x402 gate:
 
@@ -253,9 +279,9 @@ curl -H 'x-payment: test-paid' http://127.0.0.1:8080/temperature
 
 This mode is only for endpoint/demo testing. The Node/Express Gateway proxy remains the production seller path. A normal browser address-bar visit to `/temperature` should show the unpaid `402`; use `/demo` to send the local mock payment header from the browser and view the `200` payload.
 
-To expose the demo outside the LAN without router changes, use the [public ngrok demo runbook](docs/public-ngrok-demo.md). The public reference endpoint is `https://x402-temperature.ngrok.app`, which should front the Circle Gateway proxy for real seller testing. Mock mode remains useful for local development, but buyer agents should inspect and pay the proxy URL.
+To expose the demo outside the LAN without router changes, use the [public ngrok demo runbook](docs/public-ngrok-demo.md). Mock mode remains useful for local development, but buyer agents should inspect and pay the proxy URL.
 
-The confirmed external paid route is:
+The confirmed Circle Gateway external paid route is:
 
 ```bash
 circle services pay \
@@ -265,6 +291,17 @@ circle services pay \
   --chain MATIC-AMOY \
   --max-amount 0.001 \
   --output json
+```
+
+The Coinbase CDP edge buyer harness is:
+
+```bash
+cd proxy
+CDP_API_KEY_ID=... \
+CDP_API_KEY_SECRET=... \
+CDP_WALLET_SECRET=... \
+CDP_X402_ENVIRONMENT=development \
+node scripts/pay-coinbase-client.mjs https://x402-temperature-edge.ngrok.app/temperature
 ```
 
 The older direct FastAPI x402 switch remains in this repo as an educational path:
