@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import json
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.openapi.utils import get_openapi
 from pydantic import BaseModel, Field
 
@@ -145,6 +145,59 @@ def _payment_required_body(settings: Settings) -> dict[str, object]:
     }
 
 
+def _demo_page(settings: Settings) -> str:
+    paid_path = _paid_endpoint(settings)
+    architecture = "Cloud collector" if settings.enable_cloud_collector else "Self-contained edge"
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>x402 Temperature Server Demo</title>
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 2rem; line-height: 1.45; max-width: 980px; }}
+    button {{ margin: 0.25rem 0.5rem 0.25rem 0; padding: 0.55rem 0.75rem; }}
+    pre {{ background: #111827; color: #f9fafb; padding: 1rem; overflow: auto; border-radius: 6px; }}
+    code {{ background: #f3f4f6; padding: 0.1rem 0.25rem; border-radius: 4px; }}
+  </style>
+</head>
+<body>
+  <h1>x402 Temperature Server Demo</h1>
+  <p><strong>Architecture:</strong> {architecture}</p>
+  <p><strong>Paid route:</strong> <code>GET {paid_path}</code></p>
+  <p>
+    Opening the paid route directly should return <code>402 Payment Required</code>.
+    Click the mock-paid button to send the local <code>x-payment: test-paid</code> header and see the simulated payload.
+  </p>
+  <button onclick="callEndpoint('/health')">Health</button>
+  <button onclick="callEndpoint('/.well-known/x402-temperature.json')">Manifest</button>
+  <button onclick="callEndpoint('{paid_path}')">Unpaid 402</button>
+  <button onclick="callEndpoint('{paid_path}', {{'x-payment': 'test-paid'}})">Mock-Paid 200</button>
+  <pre id="output">Click a button to run a request.</pre>
+  <script>
+    async function callEndpoint(path, headers = {{}}) {{
+      const output = document.getElementById('output');
+      output.textContent = 'Loading ' + path + ' ...';
+      try {{
+        const response = await fetch(path, {{ headers }});
+        const text = await response.text();
+        let body = text;
+        try {{ body = JSON.stringify(JSON.parse(text), null, 2); }} catch (_) {{}}
+        const challenge = response.headers.get('payment-required');
+        output.textContent =
+          'URL: ' + location.origin + path + '\\n' +
+          'Status: ' + response.status + ' ' + response.statusText + '\\n' +
+          (challenge ? 'payment-required: ' + challenge + '\\n' : '') +
+          '\\n' + body;
+      }} catch (error) {{
+        output.textContent = String(error);
+      }}
+    }}
+  </script>
+</body>
+</html>"""
+
+
 def _install_mock_x402(app: FastAPI, settings: Settings) -> None:
     paid_path = _paid_endpoint(settings)
 
@@ -176,6 +229,14 @@ def create_app(settings: Settings | None = None, sensor: TemperatureSensor | Non
     )
 
     app.state.latest_readings = {}
+
+    @app.get("/", response_class=HTMLResponse)
+    def index() -> HTMLResponse:
+        return HTMLResponse(_demo_page(settings))
+
+    @app.get("/demo", response_class=HTMLResponse)
+    def demo() -> HTMLResponse:
+        return HTMLResponse(_demo_page(settings))
 
     @app.get("/health")
     def health() -> dict[str, str | bool]:

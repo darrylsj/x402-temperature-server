@@ -27,6 +27,7 @@ Test:
 
 ```bash
 curl http://127.0.0.1:8080/health
+open http://127.0.0.1:8080/demo
 curl http://127.0.0.1:8080/temperature
 curl http://127.0.0.1:8080/.well-known/x402-temperature.json
 ```
@@ -221,11 +222,12 @@ If the sample host does not have Node, use the Python mock gate:
 
 ```bash
 ENABLE_MOCK_X402=true python -m x402_temperature_server
+open http://127.0.0.1:8080/demo
 curl -i http://127.0.0.1:8080/temperature
 curl -H 'x-payment: test-paid' http://127.0.0.1:8080/temperature
 ```
 
-This proves the same unpaid-402 and paid-200 endpoint contract without installing Node or moving USDC.
+This proves the same unpaid-402 and paid-200 endpoint contract without installing Node or moving USDC. If a browser address-bar request to `/temperature` shows `402 Payment Required`, that is correct; use `/demo` for a browser-friendly button that sends the mock payment header.
 
 Ingress options:
 

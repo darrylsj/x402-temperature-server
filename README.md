@@ -165,6 +165,7 @@ Try it:
 
 ```bash
 curl http://127.0.0.1:8080/health
+open http://127.0.0.1:8080/demo
 curl http://127.0.0.1:8080/temperature
 curl http://127.0.0.1:8080/.well-known/x402-temperature.json
 ```
@@ -238,11 +239,12 @@ For a tiny sample host with no Node runtime, the Python app also includes a mock
 
 ```bash
 ENABLE_MOCK_X402=true python -m x402_temperature_server
+open http://127.0.0.1:8080/demo
 curl -i http://127.0.0.1:8080/temperature
 curl -H 'x-payment: test-paid' http://127.0.0.1:8080/temperature
 ```
 
-This mode is only for endpoint/demo testing. The Node/Express Gateway proxy remains the production seller path.
+This mode is only for endpoint/demo testing. The Node/Express Gateway proxy remains the production seller path. A normal browser address-bar visit to `/temperature` should show the unpaid `402`; use `/demo` to send the local mock payment header from the browser and view the `200` payload.
 
 The older direct FastAPI x402 switch remains in this repo as an educational path:
 
@@ -339,6 +341,7 @@ Current tests cover:
 - health endpoint
 - temperature payload shape in mock mode
 - rounded coordinates for privacy
+- browser demo page
 - simulated sensor mode
 - free discovery manifest
 - cloud collector ingest and latest-reading endpoint
