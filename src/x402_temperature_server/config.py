@@ -45,6 +45,8 @@ class Settings:
     ingest_max_age_seconds: int = 900
     power_source_label: str = "usb-wall-power"
     estimated_power_watts: float = 1.5
+    power_status_file: str = "~/.x402-temperature-power.json"
+    power_status_max_age_seconds: int = 180
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -72,4 +74,6 @@ class Settings:
             ingest_max_age_seconds=_int("INGEST_MAX_AGE_SECONDS", 900),
             power_source_label=os.getenv("POWER_SOURCE_LABEL", "usb-wall-power"),
             estimated_power_watts=_float("ESTIMATED_POWER_WATTS", 1.5),
+            power_status_file=os.getenv("POWER_STATUS_FILE", "~/.x402-temperature-power.json"),
+            power_status_max_age_seconds=_int("POWER_STATUS_MAX_AGE_SECONDS", 180),
         )

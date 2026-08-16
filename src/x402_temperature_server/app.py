@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 from datetime import datetime, timezone
 import json
+from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -82,22 +83,58 @@ def _cpu_fahrenheit(celsius: float | None) -> float | None:
     return round((celsius * 9 / 5) + 32, 2)
 
 
+def _fresh_power_status(settings: Settings) -> dict[str, object] | None:
+    status_path = Path(settings.power_status_file).expanduser()
+    if not status_path.exists():
+        return None
+    try:
+        status = json.loads(status_path.read_text())
+        timestamp = str(status["timestamp"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+    age = _age_seconds(timestamp)
+    if age > settings.power_status_max_age_seconds:
+        return None
+    status["age_seconds"] = age
+    return status
+
+
 def _station_health(settings: Settings) -> dict[str, object]:
     cpu_celsius = read_cpu_temperature_celsius()
     uptime_seconds = read_system_uptime_seconds()
+    measured_power = _fresh_power_status(settings)
+    power = {
+        "source": settings.power_source_label,
+        "measurement": "estimated",
+        "estimated_watts": round(settings.estimated_power_watts, 2),
+        "estimated_wh_per_day": round(settings.estimated_power_watts * 24, 1),
+        "measured_watts": None,
+        "battery_percent": None,
+        "battery_voltage": None,
+    }
+    if measured_power is not None:
+        voltage = measured_power.get("voltage_v")
+        current = measured_power.get("current_ma")
+        measured_watts = measured_power.get("power_mw")
+        power.update(
+            {
+                "source": measured_power.get("source", "ina219"),
+                "measurement": "measured",
+                "measured_watts": None if measured_watts is None else round(float(measured_watts) / 1000, 3),
+                "battery_voltage": voltage,
+                "battery_percent": measured_power.get("battery_percent"),
+                "current_ma": current,
+                "age_seconds": measured_power.get("age_seconds"),
+                "shutdown_voltage": measured_power.get("shutdown_voltage"),
+                "low_readings": measured_power.get("low_readings"),
+            }
+        )
     return {
         "uptime_seconds": uptime_seconds,
         "device_cpu_celsius": None if cpu_celsius is None else round(cpu_celsius, 2),
         "device_cpu_fahrenheit": _cpu_fahrenheit(cpu_celsius),
-        "power": {
-            "source": settings.power_source_label,
-            "measurement": "estimated",
-            "estimated_watts": round(settings.estimated_power_watts, 2),
-            "estimated_wh_per_day": round(settings.estimated_power_watts * 24, 1),
-            "measured_watts": None,
-            "battery_percent": None,
-            "battery_voltage": None,
-        },
+        "power": power,
     }
 
 

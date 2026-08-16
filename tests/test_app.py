@@ -60,6 +60,28 @@ def test_free_manifest_names_paid_route() -> None:
     assert payload["station_health"]["power"]["estimated_wh_per_day"] == 36.0
 
 
+def test_health_uses_fresh_power_status_file(tmp_path) -> None:
+    status_path = tmp_path / "power.json"
+    status_path.write_text(
+        '{"timestamp":"'
+        + utc_now_iso()
+        + '","source":"ina219","voltage_v":4.05,"current_ma":318.2,'
+        + '"power_mw":1288.7,"battery_percent":85.0,"shutdown_voltage":3.3,"low_readings":0}'
+    )
+    settings = Settings(
+        sensor_backend="mock",
+        station_id="roof-test-01",
+        power_status_file=str(status_path),
+    )
+    payload = TestClient(create_app(settings=settings, sensor=MockSensor())).get("/health").json()
+    power = payload["station_health"]["power"]
+    assert power["measurement"] == "measured"
+    assert power["measured_watts"] == 1.289
+    assert power["battery_voltage"] == 4.05
+    assert power["current_ma"] == 318.2
+    assert power["battery_percent"] == 85.0
+
+
 def test_browser_demo_page_points_to_paid_route() -> None:
     response = client().get("/demo")
     assert response.status_code == 200
