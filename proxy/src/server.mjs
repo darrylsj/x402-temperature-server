@@ -22,6 +22,7 @@ export function loadConfig(env = process.env) {
     priceUsd: env.PRICE_USD || "0.001",
     facilitatorUrl: env.FACILITATOR_URL || "https://gateway-api-testnet.circle.com",
     publicBaseUrl: env.PUBLIC_BASE_URL || "",
+    forwardMockPayment: env.FORWARD_MOCK_PAYMENT === "true",
   };
 }
 
@@ -188,7 +189,11 @@ async function paymentGate(config, path) {
 
 async function forwardJson(req, res, config, upstreamPath) {
   const upstream = new URL(upstreamPath, config.sensorOrigin);
-  const response = await fetch(upstream, { headers: { accept: "application/json" } });
+  const headers = { accept: "application/json" };
+  if (config.forwardMockPayment && req.payment) {
+    headers["x-payment"] = "test-paid";
+  }
+  const response = await fetch(upstream, { headers });
   const text = await response.text();
   res.status(response.status);
   res.type(response.headers.get("content-type") || "application/json");

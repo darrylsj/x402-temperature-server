@@ -5,6 +5,8 @@ import request from "supertest";
 
 import { createProxyApp } from "../src/server.mjs";
 
+let requireForwardedPayment = false;
+
 function startUpstream() {
   const app = express();
   app.use(express.json());
@@ -18,6 +20,10 @@ function startUpstream() {
     res.json({ openapi: "3.1.0", info: { title: "x402 Temperature Server" } });
   });
   app.get("/temperature", (req, res) => {
+    if (requireForwardedPayment && req.get("x-payment") !== "test-paid") {
+      res.status(402).json({ upstream: "missing forwarded payment" });
+      return;
+    }
     res.json({ station: "roof-test-01", celsius: 21.4, stale: false, route: "edge" });
   });
   app.get("/temperature/latest", (req, res) => {
@@ -67,6 +73,29 @@ describe("mock x402 proxy architectures", () => {
     const paid = await request(app).get("/temperature").set("x-payment", "test-paid");
     assert.equal(paid.status, 200);
     assert.equal(paid.headers["x-payment-verified"], "true");
+    assert.equal(paid.body.route, "edge");
+  });
+
+  it("can forward local mock payment proof to a simulated upstream after proxy payment", async () => {
+    requireForwardedPayment = true;
+    const app = await createProxyApp({
+      architecture: "edge",
+      gatewayMode: "mock",
+      sensorOrigin: upstream.origin,
+      sellerAddress: "0x0000000000000000000000000000000000000000",
+      priceUsd: "0.001",
+      forwardMockPayment: true,
+    });
+
+    let paid;
+    try {
+      paid = await request(app)
+        .get("/temperature")
+        .set("x-payment", "test-paid");
+    } finally {
+      requireForwardedPayment = false;
+    }
+    assert.equal(paid.status, 200);
     assert.equal(paid.body.route, "edge");
   });
 

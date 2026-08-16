@@ -57,6 +57,8 @@ ngrok HTTPS at https://x402-temperature-edge.ngrok.app
   -> x402host Pi edge service on 127.0.0.1:8080
 ```
 
+Because the current edge station is simulated, the public edge proxy runs with `FORWARD_MOCK_PAYMENT=true`. Circle Gateway verifies the buyer payment at the public proxy, then the proxy forwards `x-payment: test-paid` to the Pi's local mock gate so the simulated sensor service does not issue a second local challenge.
+
 The Pi publishes readings to the cloud collector through the public endpoint:
 
 ```bash
