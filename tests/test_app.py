@@ -156,6 +156,24 @@ def test_mock_x402_gates_cloud_route_without_payment() -> None:
     assert unpaid.json()["resource"]["path"] == "/temperature/latest"
 
 
+def test_cloud_collector_sample_starts_with_seeded_simulated_reading() -> None:
+    settings = Settings(
+        enable_cloud_collector=True,
+        enable_mock_x402=True,
+        sensor_backend="simulated",
+        station_ingest_token="secret",
+        simulated_base_celsius=18.2,
+        simulated_daily_swing_celsius=0,
+        simulated_noise_celsius=0,
+    )
+    test_client = TestClient(create_app(settings=settings))
+
+    paid = test_client.get("/temperature/latest", headers={"x-payment": "test-paid"})
+    assert paid.status_code == 200
+    assert paid.json()["station"] == "roof-demo-01"
+    assert paid.json()["celsius"] == 18.2
+
+
 def test_cloud_collector_rejects_bad_token() -> None:
     settings = Settings(enable_cloud_collector=True, station_ingest_token="secret")
     test_client = TestClient(create_app(settings=settings, sensor=MockSensor()))

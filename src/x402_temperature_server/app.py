@@ -229,6 +229,15 @@ def create_app(settings: Settings | None = None, sensor: TemperatureSensor | Non
     )
 
     app.state.latest_readings = {}
+    if settings.enable_cloud_collector and settings.sensor_backend.lower() in {"mock", "simulated"}:
+        seed = sensor.read()
+        app.state.latest_readings[settings.station_id] = SensorReadingIngest(
+            station=settings.station_id,
+            celsius=seed.celsius,
+            humidity=seed.humidity,
+            pressure_hpa=seed.pressure_hpa,
+            read_at=utc_now_iso(),
+        )
 
     @app.get("/", response_class=HTMLResponse)
     def index() -> HTMLResponse:
