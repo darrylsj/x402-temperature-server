@@ -147,8 +147,11 @@ Accepted:
 Deferred:
 
 - Persistent cloud storage. The included collector is intentionally in-memory for the first runnable demo; use SQLite, Postgres, Redis, or a small JSON-backed store before treating it as production.
-- A real paid Circle Gateway buyer-wallet test. The included proxy can run in Circle mode, but local verification uses mock mode so it does not move USDC.
 - Low-power battery control. The docs recommend it, but the first hardware order does not include battery telemetry hardware.
+
+Confirmed:
+
+- Real Circle Gateway buyer-wallet test. The public SIM cloud seller endpoint completed 50 paid testnet purchases at `0.001` USDC each with zero failures. See [Paid Buyer Test](docs/paid-buyer-test.md).
 
 ## Local Quick Start
 
@@ -251,6 +254,18 @@ curl -H 'x-payment: test-paid' http://127.0.0.1:8080/temperature
 This mode is only for endpoint/demo testing. The Node/Express Gateway proxy remains the production seller path. A normal browser address-bar visit to `/temperature` should show the unpaid `402`; use `/demo` to send the local mock payment header from the browser and view the `200` payload.
 
 To expose the demo outside the LAN without router changes, use the [public ngrok demo runbook](docs/public-ngrok-demo.md). The public reference endpoint is `https://x402-temperature.ngrok.app`, which should front the Circle Gateway proxy for real seller testing. Mock mode remains useful for local development, but buyer agents should inspect and pay the proxy URL.
+
+The confirmed external paid route is:
+
+```bash
+circle services pay \
+  https://x402-temperature.ngrok.app/temperature/latest \
+  -X GET \
+  --address "$BUYER_ADDRESS" \
+  --chain MATIC-AMOY \
+  --max-amount 0.001 \
+  --output json
+```
 
 The older direct FastAPI x402 switch remains in this repo as an educational path:
 

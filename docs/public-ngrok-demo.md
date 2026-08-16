@@ -134,6 +134,8 @@ Circle's read-only inspect command should report the endpoint as payable:
 circle services inspect "$URL/temperature/latest" --output json
 ```
 
+For the confirmed paid buyer test flow, see [Paid Buyer Test](paid-buyer-test.md). The first successful 50-call run used Polygon Amoy testnet Gateway balance and completed 50 paid purchases with zero failures.
+
 The `ngrok-skip-browser-warning` header is useful for automated agents and scripts that should bypass ngrok's browser interstitial. The `x-payment: test-paid` header only works in local mock mode; it is not a real payment.
 
 ## Router Port Forwarding Alternative
@@ -157,4 +159,4 @@ The mock Python x402 mode proves the HTTP contract but does not settle USDC. A r
 4. A real unpaid `402` challenge with current accepted networks and price.
 5. A buyer-wallet estimate before any paid test call.
 
-Confirmed USDC payments are irreversible. Keep first paid tests on testnet where possible, or ask for explicit approval before moving real funds.
+Confirmed USDC payments are irreversible. Keep first paid tests on testnet where possible, or ask for explicit approval before moving real funds. The current verified buyer path is testnet Polygon Amoy; Base Sepolia funded correctly but did not credit Gateway balance during the first test run.
