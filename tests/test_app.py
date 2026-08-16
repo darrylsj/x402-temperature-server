@@ -60,9 +60,11 @@ def test_free_manifest_names_paid_route() -> None:
 def test_browser_demo_page_points_to_paid_route() -> None:
     response = client().get("/demo")
     assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
     assert "x402 Temperature Server Demo" in response.text
     assert "GET /temperature" in response.text
     assert "Mock-Paid 200" in response.text
+    assert "Timed out after" in response.text
 
 
 def test_openapi_marks_paid_edge_operation_for_agents() -> None:

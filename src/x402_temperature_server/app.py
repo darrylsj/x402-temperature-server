@@ -175,11 +175,17 @@ def _demo_page(settings: Settings) -> str:
   <button onclick="callEndpoint('{paid_path}', {{'x-payment': 'test-paid'}})">Mock-Paid 200</button>
   <pre id="output">Click a button to run a request.</pre>
   <script>
-    async function callEndpoint(path, headers = {{}}) {{
+    async function callEndpoint(path, headers = {{}}, timeoutMs = 8000) {{
       const output = document.getElementById('output');
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
       output.textContent = 'Loading ' + path + ' ...';
       try {{
-        const response = await fetch(path, {{ headers }});
+        const response = await fetch(path, {{
+          cache: 'no-store',
+          headers,
+          signal: controller.signal
+        }});
         const text = await response.text();
         let body = text;
         try {{ body = JSON.stringify(JSON.parse(text), null, 2); }} catch (_) {{}}
@@ -190,7 +196,13 @@ def _demo_page(settings: Settings) -> str:
           (challenge ? 'payment-required: ' + challenge + '\\n' : '') +
           '\\n' + body;
       }} catch (error) {{
-        output.textContent = String(error);
+        output.textContent =
+          'Request failed for ' + location.origin + path + '\\n\\n' +
+          (error.name === 'AbortError'
+            ? 'Timed out after ' + timeoutMs + ' ms. Confirm this browser is on the same LAN as x402host and try a hard refresh.'
+            : String(error));
+      }} finally {{
+        clearTimeout(timer);
       }}
     }}
   </script>
@@ -241,11 +253,11 @@ def create_app(settings: Settings | None = None, sensor: TemperatureSensor | Non
 
     @app.get("/", response_class=HTMLResponse)
     def index() -> HTMLResponse:
-        return HTMLResponse(_demo_page(settings))
+        return HTMLResponse(_demo_page(settings), headers={"Cache-Control": "no-store"})
 
     @app.get("/demo", response_class=HTMLResponse)
     def demo() -> HTMLResponse:
-        return HTMLResponse(_demo_page(settings))
+        return HTMLResponse(_demo_page(settings), headers={"Cache-Control": "no-store"})
 
     @app.get("/health")
     def health() -> dict[str, str | bool]:
