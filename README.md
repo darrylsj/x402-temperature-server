@@ -250,7 +250,7 @@ curl -H 'x-payment: test-paid' http://127.0.0.1:8080/temperature
 
 This mode is only for endpoint/demo testing. The Node/Express Gateway proxy remains the production seller path. A normal browser address-bar visit to `/temperature` should show the unpaid `402`; use `/demo` to send the local mock payment header from the browser and view the `200` payload.
 
-To expose the demo outside the LAN without router changes, use the [public ngrok demo runbook](docs/public-ngrok-demo.md). The quick path is a separate ngrok tunnel for the x402 service; the production path is still a stable public HTTPS endpoint in front of the Circle Gateway proxy.
+To expose the demo outside the LAN without router changes, use the [public ngrok demo runbook](docs/public-ngrok-demo.md). The public reference endpoint is `https://x402-temperature.ngrok.app`, which should front the Circle Gateway proxy for real seller testing. Mock mode remains useful for local development, but buyer agents should inspect and pay the proxy URL.
 
 The older direct FastAPI x402 switch remains in this repo as an educational path:
 

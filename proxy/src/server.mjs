@@ -20,6 +20,7 @@ export function loadConfig(env = process.env) {
     sellerAddress: env.SELLER_ADDRESS || "0x0000000000000000000000000000000000000000",
     priceUsd: env.PRICE_USD || "0.001",
     facilitatorUrl: env.FACILITATOR_URL || "https://gateway-api-testnet.circle.com",
+    publicBaseUrl: env.PUBLIC_BASE_URL || "",
   };
 }
 
@@ -99,6 +100,28 @@ async function forwardJson(req, res, config, upstreamPath) {
   res.send(text);
 }
 
+async function forwardManifest(req, res, config) {
+  const upstream = new URL("/.well-known/x402-temperature.json", config.sensorOrigin);
+  const response = await fetch(upstream, { headers: { accept: "application/json" } });
+  const body = await response.json();
+  const path = paidPath(config);
+  const publicBaseUrl = config.publicBaseUrl || `${req.protocol}://${req.get("host")}`;
+
+  res.status(response.status).json({
+    ...body,
+    public_base_url: publicBaseUrl,
+    paid_endpoint: `GET ${path}`,
+    paid_url: new URL(path, publicBaseUrl).toString(),
+    price_usdc: config.priceUsd,
+    seller_address: config.sellerAddress,
+    payment: {
+      gateway_mode: config.gatewayMode,
+      scheme: config.gatewayMode === "circle" ? "GatewayWalletBatched" : "mock",
+      facilitator_url: config.gatewayMode === "circle" ? config.facilitatorUrl : null,
+    },
+  });
+}
+
 export async function createProxyApp(config = loadConfig()) {
   const app = express();
   const path = paidPath(config);
@@ -114,7 +137,7 @@ export async function createProxyApp(config = loadConfig()) {
 
   app.get("/.well-known/x402-temperature.json", async (req, res, next) => {
     try {
-      await forwardJson(req, res, config, "/.well-known/x402-temperature.json");
+      await forwardManifest(req, res, config);
     } catch (error) {
       next(error);
     }

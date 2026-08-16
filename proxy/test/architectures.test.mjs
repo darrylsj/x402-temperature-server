@@ -87,10 +87,19 @@ describe("mock x402 proxy architectures", () => {
       sensorOrigin: upstream.origin,
       sellerAddress: "0x0000000000000000000000000000000000000000",
       priceUsd: "0.001",
+      publicBaseUrl: "https://x402-temperature.example",
     });
 
     assert.equal((await request(app).get("/health")).status, 200);
-    assert.equal((await request(app).get("/.well-known/x402-temperature.json")).status, 200);
+    const manifest = await request(app).get("/.well-known/x402-temperature.json");
+    assert.equal(manifest.status, 200);
+    assert.equal(manifest.body.public_base_url, "https://x402-temperature.example");
+    assert.equal(manifest.body.paid_endpoint, "GET /temperature/latest");
+    assert.equal(
+      manifest.body.paid_url,
+      "https://x402-temperature.example/temperature/latest",
+    );
+    assert.equal(manifest.body.payment.scheme, "mock");
     assert.equal((await request(app).get("/openapi.json")).status, 200);
   });
 });

@@ -10,6 +10,15 @@ The current public sample endpoint is:
 https://x402-temperature.ngrok.app
 ```
 
+For real seller testing, this URL should point at the Node/Express Circle Gateway proxy, not directly at the Python mock gate:
+
+```text
+ngrok HTTPS
+  -> local proxy on :3090
+  -> SSH forward on :18080
+  -> Pi Python temperature service on x402host:8080
+```
+
 ## Recommended Demo Topology
 
 ```text
@@ -69,7 +78,7 @@ ssh \
   james@10.0.0.24
 ```
 
-## Public Smoke Test
+## Public Seller Smoke Test
 
 Set the public URL ngrok returns:
 
@@ -83,22 +92,19 @@ Health should return `200`:
 curl -H 'ngrok-skip-browser-warning: true' "$URL/health"
 ```
 
-The unpaid paid route should return `402 Payment Required`:
+The unpaid paid route should return `402 Payment Required` with Circle Gateway payment requirements:
 
 ```bash
 curl -i -H 'ngrok-skip-browser-warning: true' "$URL/temperature"
 ```
 
-In local mock mode, the test payment header should return `200` with the Danville reading:
+Circle's read-only inspect command should report the endpoint as payable:
 
 ```bash
-curl \
-  -H 'ngrok-skip-browser-warning: true' \
-  -H 'x-payment: test-paid' \
-  "$URL/temperature"
+circle services inspect "$URL/temperature" --output json
 ```
 
-The `ngrok-skip-browser-warning` header is useful for automated agents and scripts that should bypass ngrok's browser interstitial.
+The `ngrok-skip-browser-warning` header is useful for automated agents and scripts that should bypass ngrok's browser interstitial. The `x-payment: test-paid` header only works in local mock mode; it is not a real payment.
 
 ## Router Port Forwarding Alternative
 
