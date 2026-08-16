@@ -159,4 +159,4 @@ The mock Python x402 mode proves the HTTP contract but does not settle USDC. A r
 4. A real unpaid `402` challenge with current accepted networks and price.
 5. A buyer-wallet estimate before any paid test call.
 
-Confirmed USDC payments are irreversible. Keep first paid tests on testnet where possible, or ask for explicit approval before moving real funds. The current verified buyer path is testnet Polygon Amoy; Base Sepolia funded correctly but did not credit Gateway balance during the first test run.
+Confirmed USDC payments are irreversible. Keep first paid tests on testnet where possible, or ask for explicit approval before moving real funds. Polygon Amoy is the fastest verified testnet buyer path for demos. Base Sepolia also works, but Gateway balance does not become available until Circle's required finality window has passed; always poll `circle gateway balance` before paying.

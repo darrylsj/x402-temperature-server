@@ -145,16 +145,27 @@ The final paid response returned fresh Danville data:
 }
 ```
 
-## Base Sepolia Caveat
+## Base Sepolia Timing Note
 
-The first buyer attempt used Base Sepolia. The wallet funded correctly, but Gateway balance did not credit after direct and eco deposits even though wallet USDC was debited. A paid request on that path failed with:
+The first buyer attempt used Base Sepolia. The wallet funded correctly, but the first paid request was attempted before Gateway balance had credited. It failed with:
 
 ```text
 Payment submitted but request failed with HTTP 402
 Server response: Insufficient Gateway balance
 ```
 
-For the current testnet buyer workflow, prefer Polygon Amoy until the Base Sepolia Gateway-credit issue is resolved. A Circle CLI bug report was submitted for the Base Sepolia issue.
+Circle's Gateway supported-blockchains docs explain why this happened: Base waits about 65 Ethereum blocks before Gateway balance updates, with an average attestation time of roughly 13 to 19 minutes. Polygon Amoy is much faster, around 2 to 3 blocks / roughly 8 seconds.
+
+After the Base Sepolia deposit reached the required finality window, Gateway balance appeared and a Base Sepolia paid call succeeded:
+
+```text
+chain: Base Sepolia
+amount: 0.001 USDC
+scheme: GatewayWalletBatched
+response: fresh Danville weather JSON
+```
+
+For fast demo loops, prefer Polygon Amoy. For Base Sepolia, wait until `circle gateway balance` shows non-zero Gateway balance before paying.
 
 ## Safety
 
