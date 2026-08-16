@@ -190,7 +190,7 @@ async function paymentGate(config, path) {
 async function forwardJson(req, res, config, upstreamPath) {
   const upstream = new URL(upstreamPath, config.sensorOrigin);
   const headers = { accept: "application/json" };
-  if (config.forwardMockPayment && req.payment) {
+  if (config.forwardMockPayment && upstreamPath === paidPath(config)) {
     headers["x-payment"] = "test-paid";
   }
   const response = await fetch(upstream, { headers });
