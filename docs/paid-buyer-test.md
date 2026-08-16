@@ -66,6 +66,16 @@ circle gateway balance \
 
 Gateway balance must be non-zero before paid requests can succeed.
 
+For slower chains, especially Base Sepolia, use the wait helper before any paid loop:
+
+```bash
+scripts/wait-gateway-balance.sh \
+  --address "$BUYER_ADDRESS" \
+  --chain BASE-SEPOLIA \
+  --minimum 0.05 \
+  --timeout-seconds 1500
+```
+
 ## Estimate
 
 Always estimate before the first paid request:
