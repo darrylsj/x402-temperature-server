@@ -153,7 +153,7 @@ Confirmed:
 
 - Real Circle Gateway buyer-wallet test. The public SIM cloud seller endpoint completed 50 paid testnet purchases at `0.001` USDC each with zero failures. See [Paid Buyer Test](docs/paid-buyer-test.md).
 - Two public demo URLs. The cloud/SIM route is the Circle Gateway reference design. The direct edge/Pi route is the Coinbase CDP facilitator reference design.
-- Live credential note: the Coinbase edge path is implemented in the proxy and docs, but the public edge deployment must have current CDP x402 API key credentials before it can be switched from Circle to Coinbase. A legacy Coinbase account/trading API key is not a CDP x402 facilitator credential.
+- Live Coinbase edge seller. The public edge deployment now runs with `X402_GATEWAY_MODE=coinbase`; its manifest reports `gateway_mode: "coinbase"` and facilitator `Coinbase CDP`. A legacy Coinbase account/trading API key is not a CDP x402 facilitator credential.
 
 ## Local Quick Start
 
@@ -232,7 +232,7 @@ The two reference architectures deliberately use different facilitator paths:
 
 That split is the point of the field demo: the same paid Danville weather product can be sold through two deployment patterns and two major hosted facilitator paths.
 
-Deployment truth matters here. The cloud/SIM Circle endpoint is already verified with real testnet paid calls. The edge/Pi Coinbase endpoint is the intended second facilitator path, and the code is ready for it, but the public runtime should not be called clean until `X402_GATEWAY_MODE=coinbase` starts successfully with current `CDP_API_KEY_ID` and `CDP_API_KEY_SECRET` values and the public manifest reports `gateway_mode: "coinbase"`.
+Deployment truth matters here. The cloud/SIM Circle endpoint is verified with real testnet paid calls. The edge/Pi Coinbase endpoint is also live as the second facilitator path: `X402_GATEWAY_MODE=coinbase` starts successfully with current `CDP_API_KEY_ID` and `CDP_API_KEY_SECRET` values, and the public manifest reports `gateway_mode: "coinbase"`.
 
 Install and test the proxy:
 
@@ -267,6 +267,8 @@ CDP_X402_ENVIRONMENT=development
 ```
 
 This repo uses Coinbase's `payToConfig: { type: "address", evm: SELLER_ADDRESS }` mode, so the seller does not need `CDP_WALLET_SECRET` just to receive through an existing EVM address. The CDP API key ID/secret authenticate the hosted facilitator. The proxy registers only the paid route, so `/health`, `/demo`, `/openapi.json`, and `/.well-known/x402-temperature.json` remain free.
+
+Coinbase buyer testing is different from Coinbase selling. A buyer that uses `CdpX402Client` needs `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET`, and `CDP_WALLET_SECRET`, because the client provisions and signs with a CDP-managed wallet. Do not rotate an existing project wallet secret casually; create a separate buyer-test project or confirm no other app depends on the existing wallet secret first.
 
 For a tiny sample host with no Node runtime, the Python app also includes a mock x402 gate:
 

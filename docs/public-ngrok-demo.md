@@ -70,7 +70,7 @@ This repo intentionally keeps the two public architectures on different hosted f
 
 Do not treat these as interchangeable when debugging. Circle buyer tests use the Circle CLI and Gateway balances. Coinbase seller tests use a CDP API key ID/secret plus a seller EVM address. Coinbase buyer tests use CDP wallet credentials and the x402 fetch/client packages.
 
-Operational gate: the cloud/SIM Circle path is live and has completed real testnet paid calls. The edge/Pi Coinbase path is implemented in the repo, but the public edge tunnel is only cleanly on Coinbase after the edge proxy starts with current CDP x402 credentials and `/.well-known/x402-temperature.json` reports `"gateway_mode": "coinbase"`. If the manifest still reports `"circle"`, the edge URL is reachable but not yet running the Coinbase facilitator.
+Current live state: the cloud/SIM Circle path is live and has completed real testnet paid calls. The edge/Pi Coinbase path is also live as the public second-facilitator endpoint. Verify it with `/.well-known/x402-temperature.json`; the manifest should report `"gateway_mode": "coinbase"` and facilitator `"Coinbase CDP"`. If the manifest ever reports `"circle"`, the edge URL is reachable but has regressed to the wrong facilitator.
 
 The Pi publishes readings to the cloud collector through the public endpoint:
 
@@ -202,6 +202,8 @@ payToConfig: { type: "address", evm: process.env.SELLER_ADDRESS }
 ```
 
 That keeps seller setup simpler: `CDP_WALLET_SECRET` is not required for the server to receive into an existing EVM address. The CDP API key ID and secret are still required because the hosted facilitator must authenticate verification and settlement calls.
+
+Coinbase buyer testing is the part that still requires `CDP_WALLET_SECRET`. `CdpX402Client` provisions and signs with a CDP-managed wallet, so it needs the wallet secret in addition to the API key ID and secret. Do not click "Delete and generate new secret" on an existing project unless you have confirmed no deployed app depends on the current wallet secret; use a separate buyer-test project when in doubt.
 
 The `ngrok-skip-browser-warning` header is useful for automated agents and scripts that should bypass ngrok's browser interstitial. The `x-payment: test-paid` header only works in local mock mode; it is not a real payment.
 
