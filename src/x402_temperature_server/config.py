@@ -24,9 +24,9 @@ def _int(name: str, default: int) -> int:
 class Settings:
     sensor_backend: str = "simulated"
     station_id: str = "danville-demo-01"
-    location_label: str = "Danville, CA"
-    latitude: float = 37.821635
-    longitude: float = -121.999917
+    location_label: str = "Danville, CA - Sycamore Valley Park reference"
+    latitude: float = 37.8074706
+    longitude: float = -121.9464792
     reading_ttl_seconds: int = 60
     simulated_base_celsius: float = 22.22
     simulated_daily_swing_celsius: float = 0.0
@@ -53,9 +53,9 @@ class Settings:
         return cls(
             sensor_backend=os.getenv("SENSOR_BACKEND", "simulated"),
             station_id=os.getenv("STATION_ID", "danville-demo-01"),
-            location_label=os.getenv("LOCATION_LABEL", "Danville, CA"),
-            latitude=_float("LATITUDE", 37.821635),
-            longitude=_float("LONGITUDE", -121.999917),
+            location_label=os.getenv("LOCATION_LABEL", "Danville, CA - Sycamore Valley Park reference"),
+            latitude=_float("LATITUDE", 37.8074706),
+            longitude=_float("LONGITUDE", -121.9464792),
             reading_ttl_seconds=_int("READING_TTL_SECONDS", 60),
             simulated_base_celsius=_float("SIMULATED_BASE_CELSIUS", 22.22),
             simulated_daily_swing_celsius=_float("SIMULATED_DAILY_SWING_CELSIUS", 0.0),

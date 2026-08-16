@@ -24,6 +24,9 @@ export function loadConfig(env = process.env) {
     publicBaseUrl: env.PUBLIC_BASE_URL || "",
     forwardMockPayment: env.FORWARD_MOCK_PAYMENT === "true",
     coinbaseEnvironment: env.CDP_X402_ENVIRONMENT || "development",
+    locationLabel: env.LOCATION_LABEL || "Danville, CA - Sycamore Valley Park reference",
+    latitude: Number(env.LATITUDE || "37.8074706"),
+    longitude: Number(env.LONGITUDE || "-121.9464792"),
   };
 }
 
@@ -87,6 +90,8 @@ function escapeHtml(value) {
 
 function demoPage(config, publicBaseUrl, path) {
   const paidUrl = new URL(path, publicBaseUrl).toString();
+  const publicLat = Number.isFinite(config.latitude) ? config.latitude.toFixed(4) : "37.8075";
+  const publicLon = Number.isFinite(config.longitude) ? config.longitude.toFixed(4) : "-121.9465";
   const facilitatorLabel =
     config.gatewayMode === "circle"
       ? "Circle Gateway"
@@ -139,9 +144,11 @@ function demoPage(config, publicBaseUrl, path) {
 </head>
 <body>
   <main>
-    <h1>x402 Temperature Public Demo</h1>
-    <p>This page is public and free. The temperature payload is protected by x402 and returns <code>402 Payment Required</code> until a buyer agent sends valid ${escapeHtml(paymentDescription)}.</p>
+    <h1>Danville x402 Temperature Public Demo</h1>
+    <p>This page is public and free. It represents temperature data for Danville, California using Sycamore Valley Park as the public coordinate reference: <code>${escapeHtml(publicLat)}, ${escapeHtml(publicLon)}</code>. It does not publish a private home coordinate.</p>
+    <p>The temperature payload is protected by x402 and returns <code>402 Payment Required</code> until a buyer agent sends valid ${escapeHtml(paymentDescription)}.</p>
     <div class="meta">
+      <div class="tile"><div class="label">Location</div><div class="value">${escapeHtml(config.locationLabel)}</div></div>
       <div class="tile"><div class="label">Architecture</div><div class="value">${escapeHtml(config.architecture)}</div></div>
       <div class="tile"><div class="label">Facilitator</div><div class="value">${escapeHtml(facilitatorLabel)}</div></div>
       <div class="tile"><div class="label">Price</div><div class="value">${escapeHtml(config.priceUsd)} USDC</div></div>

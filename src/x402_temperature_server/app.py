@@ -221,6 +221,8 @@ def _payment_required_body(settings: Settings) -> dict[str, object]:
 def _demo_page(settings: Settings) -> str:
     paid_path = _paid_endpoint(settings)
     architecture = "Cloud collector" if settings.enable_cloud_collector else "Self-contained edge"
+    public_lat = round(settings.latitude, 4)
+    public_lon = round(settings.longitude, 4)
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -235,8 +237,14 @@ def _demo_page(settings: Settings) -> str:
   </style>
 </head>
 <body>
-  <h1>x402 Temperature Server Demo</h1>
+  <h1>Danville x402 Temperature Server</h1>
+  <p>
+    This paid endpoint serves temperature data for Danville, California.
+    The public location reference is Sycamore Valley Park, near
+    <code>{public_lat}, {public_lon}</code>; it is intentionally not a private home coordinate.
+  </p>
   <p><strong>Architecture:</strong> {architecture}</p>
+  <p><strong>Location:</strong> {settings.location_label}</p>
   <p><strong>Paid route:</strong> <code>GET {paid_path}</code></p>
   <p>
     Opening the paid route directly should return <code>402 Payment Required</code>.
@@ -287,6 +295,8 @@ def _simple_page(settings: Settings) -> str:
     paid_path = _paid_endpoint(settings)
     architecture = "Cloud collector" if settings.enable_cloud_collector else "Self-contained edge"
     paid_url = paid_path
+    public_lat = round(settings.latitude, 4)
+    public_lon = round(settings.longitude, 4)
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -300,9 +310,11 @@ def _simple_page(settings: Settings) -> str:
   </style>
 </head>
 <body>
-  <h1>x402 Temperature Server Simple View</h1>
+  <h1>Danville x402 Temperature Server Simple View</h1>
   <p>This page is intentionally plain HTML with no JavaScript.</p>
+  <p>This endpoint represents Danville, California temperature data using Sycamore Valley Park as the public coordinate reference: <code>{public_lat}, {public_lon}</code>.</p>
   <p><strong>Architecture:</strong> {architecture}</p>
+  <p><strong>Location:</strong> {settings.location_label}</p>
   <p><strong>Paid route:</strong> <code>GET {paid_path}</code></p>
   <a href="/health">Open health JSON</a>
   <a href="/.well-known/x402-temperature.json">Open discovery manifest JSON</a>

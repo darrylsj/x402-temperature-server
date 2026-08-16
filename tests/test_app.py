@@ -86,7 +86,8 @@ def test_browser_demo_page_points_to_paid_route() -> None:
     response = client().get("/demo")
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-store"
-    assert "x402 Temperature Server Demo" in response.text
+    assert "Danville x402 Temperature Server" in response.text
+    assert "Sycamore Valley Park" in response.text
     assert "GET /temperature" in response.text
     assert "Mock-Paid 200" in response.text
     assert "Timed out after" in response.text

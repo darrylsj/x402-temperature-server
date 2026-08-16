@@ -152,7 +152,8 @@ describe("mock x402 proxy architectures", () => {
 
     const demo = await request(app).get("/demo");
     assert.equal(demo.status, 200);
-    assert.match(demo.text, /x402 Temperature Public Demo/);
+    assert.match(demo.text, /Danville x402 Temperature Public Demo/);
+    assert.match(demo.text, /Sycamore Valley Park/);
     assert.match(demo.text, /https:\/\/x402-temperature\.example\/temperature\/latest/);
     assert.match(demo.text, /GET \/temperature\/latest/);
   });

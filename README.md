@@ -6,7 +6,7 @@ This is the companion implementation for the weather-bot chapter of *The x402 Ha
 
 No physical sensor is required for the first demo. The default `simulated` backend produces realistic temperature, humidity, and pressure readings so the API and x402 payment flow can be tested before the BME280 arrives.
 
-The checked-in demo defaults to a city-level Danville, CA station using rounded town coordinates and a current local-weather seed from the nearest public weather observation/forecast. It does not publish a home address or exact private coordinates.
+The checked-in demo defaults to a Danville, CA station using Sycamore Valley Park as the public coordinate reference and a current local-weather seed from the nearest public weather observation/forecast. It does not publish a home address or exact private coordinates.
 
 ![Raspberry Pi Zero 2 W connected to a BME280 sensor over I2C](docs/images/pi-zero-2w-bme280-wiring.jpg)
 
@@ -26,7 +26,7 @@ The checked-in demo defaults to a city-level Danville, CA station using rounded 
 ```json
 {
   "station": "danville-demo-01",
-  "location": "Danville, CA",
+  "location": "Danville, CA - Sycamore Valley Park reference",
   "celsius": 22.22,
   "fahrenheit": 72.00,
   "humidity": 54.0,
@@ -35,12 +35,12 @@ The checked-in demo defaults to a city-level Danville, CA station using rounded 
   "ttl_seconds": 60,
   "age_seconds": 0,
   "stale": false,
-  "lat": 37.82,
-  "lon": -122.00
+  "lat": 37.81,
+  "lon": -121.95
 }
 ```
 
-The latitude and longitude are rounded on purpose. Sell the weather near you, not your doorstep.
+The latitude and longitude are rounded on purpose and point at a public nearby landmark. Sell the weather near you, not your doorstep.
 
 ## Build Goals
 
