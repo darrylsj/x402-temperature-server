@@ -4,6 +4,12 @@ Use ngrok when the Pi is on a private home LAN but buyer agents need a public HT
 
 This is the quickest demo path. It avoids router port-forwarding, public DNS, and home firewall changes. It is still a demo path: for a real paid service, prefer the cloud collector architecture or a stable tunnel/domain with the Circle Gateway proxy.
 
+The current public sample endpoint is:
+
+```text
+https://x402-temperature.ngrok.app
+```
+
 ## Recommended Demo Topology
 
 ```text
@@ -16,7 +22,7 @@ buyer agent
 If ngrok runs directly on the Pi, point the tunnel at the local service:
 
 ```bash
-ngrok http http://127.0.0.1:8080 --name x402-temperature
+ngrok http --url https://x402-temperature.ngrok.app http://127.0.0.1:8080
 ```
 
 If ngrok is already running on another machine on the LAN, such as a Mac that also hosts other tunnels, create a local SSH forward from that machine to the Pi:
@@ -37,13 +43,30 @@ Then create a separate ngrok tunnel that forwards to the local port-forward:
 ```bash
 curl -X POST http://127.0.0.1:4040/api/tunnels \
   -H 'Content-Type: application/json' \
-  -d '{"name":"x402-temperature","addr":"http://10.0.0.85:18080","proto":"http"}'
+  -d '{"name":"x402-temperature","addr":"http://127.0.0.1:18080","proto":"http","hostname":"x402-temperature.ngrok.app"}'
 ```
 
-Use the host machine's LAN IP in the `addr` value. On macOS:
+To make the tunnel survive Mac restarts, add the same public URL to the ngrok config:
+
+```yaml
+tunnels:
+  x402-temperature:
+    addr: 18080
+    proto: http
+    url: https://x402-temperature.ngrok.app
+```
+
+The SSH forward also needs to survive restarts. On macOS, use a LaunchAgent that runs:
 
 ```bash
-ipconfig getifaddr en0
+ssh \
+  -o BatchMode=yes \
+  -o ExitOnForwardFailure=yes \
+  -o ServerAliveInterval=30 \
+  -o ServerAliveCountMax=3 \
+  -N \
+  -L 0.0.0.0:18080:127.0.0.1:8080 \
+  james@10.0.0.24
 ```
 
 ## Public Smoke Test
@@ -51,7 +74,7 @@ ipconfig getifaddr en0
 Set the public URL ngrok returns:
 
 ```bash
-URL='https://example.ngrok-free.dev'
+URL='https://x402-temperature.ngrok.app'
 ```
 
 Health should return `200`:
