@@ -10,6 +10,13 @@ The current public sample endpoint is:
 https://x402-temperature.ngrok.app
 ```
 
+Current public demo URLs:
+
+```text
+Cloud collector on SIM: https://x402-temperature.ngrok.app/demo
+Direct edge/Pi path:    https://x402-temperature-edge.ngrok.app/demo
+```
+
 Current live deployment:
 
 ```text
@@ -38,6 +45,16 @@ ngrok HTTPS
   -> ngrok agent on the cloud server
   -> Node/Express Circle Gateway proxy on 127.0.0.1:3090
   -> Python cloud collector on 127.0.0.1:8091
+```
+
+For the direct edge architecture, a separate public endpoint fronts the edge proxy:
+
+```text
+ngrok HTTPS at https://x402-temperature-edge.ngrok.app
+  -> ngrok agent on the Mac
+  -> Node/Express Circle Gateway proxy on 127.0.0.1:3091
+  -> SSH forward on 127.0.0.1:18080
+  -> x402host Pi edge service on 127.0.0.1:8080
 ```
 
 The Pi publishes readings to the cloud collector through the public endpoint:

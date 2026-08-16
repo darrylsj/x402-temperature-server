@@ -74,6 +74,103 @@ function mockPaymentGate(config, path) {
   };
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function demoPage(config, publicBaseUrl, path) {
+  const paidUrl = new URL(path, publicBaseUrl).toString();
+  const chain = config.gatewayMode === "circle" ? "MATIC-AMOY" : "mock";
+  const payCommand =
+    config.gatewayMode === "circle"
+      ? `circle services pay ${paidUrl} -X GET --address "$BUYER_ADDRESS" --chain ${chain} --max-amount ${config.priceUsd} --output json`
+      : `curl -H 'x-payment: test-paid' ${paidUrl}`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>x402 Temperature Public Demo</title>
+  <style>
+    :root { color-scheme: light dark; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; background: #f6f7f9; color: #17202a; }
+    main { max-width: 920px; margin: 0 auto; padding: 32px 20px 48px; }
+    h1 { font-size: 28px; margin: 0 0 8px; letter-spacing: 0; }
+    h2 { font-size: 18px; margin: 28px 0 10px; letter-spacing: 0; }
+    p { line-height: 1.5; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #111827; color: #e5e7eb; padding: 14px; border-radius: 8px; }
+    .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin: 22px 0; }
+    .tile { border: 1px solid #d8dee8; border-radius: 8px; padding: 12px; background: #fff; }
+    .label { color: #536170; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .value { margin-top: 4px; font-weight: 650; overflow-wrap: anywhere; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
+    button, a.button { border: 1px solid #ccd3dd; background: #fff; color: #17202a; border-radius: 8px; padding: 10px 12px; text-decoration: none; cursor: pointer; font-weight: 650; }
+    button:hover, a.button:hover { background: #eef2f7; }
+    #output { min-height: 150px; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0f1720; color: #edf2f7; }
+      .tile, button, a.button { background: #151f2b; color: #edf2f7; border-color: #2b3746; }
+      button:hover, a.button:hover { background: #1d2937; }
+      .label { color: #9aa7b7; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>x402 Temperature Public Demo</h1>
+    <p>This page is public and free. The temperature payload is protected by x402 and returns <code>402 Payment Required</code> until a buyer agent sends valid Circle Gateway payment proof.</p>
+    <div class="meta">
+      <div class="tile"><div class="label">Architecture</div><div class="value">${escapeHtml(config.architecture)}</div></div>
+      <div class="tile"><div class="label">Gateway Mode</div><div class="value">${escapeHtml(config.gatewayMode)}</div></div>
+      <div class="tile"><div class="label">Price</div><div class="value">${escapeHtml(config.priceUsd)} USDC</div></div>
+      <div class="tile"><div class="label">Paid Route</div><div class="value">GET ${escapeHtml(path)}</div></div>
+    </div>
+    <div class="actions">
+      <button type="button" data-url="/health">Health</button>
+      <button type="button" data-url="/.well-known/x402-temperature.json">Manifest</button>
+      <button type="button" data-url="${escapeHtml(path)}">Unpaid 402</button>
+      <a class="button" href="${escapeHtml(paidUrl)}">Open Paid URL</a>
+    </div>
+    <h2>Paid Buyer Command</h2>
+    <pre>${escapeHtml(payCommand)}</pre>
+    <h2>Output</h2>
+    <pre id="output">Click Health, Manifest, or Unpaid 402.</pre>
+  </main>
+  <script>
+    async function callPath(path) {
+      const output = document.getElementById('output');
+      output.textContent = 'Loading ' + path + ' ...';
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      try {
+        const res = await fetch(path, {
+          headers: { accept: 'application/json', 'ngrok-skip-browser-warning': 'true' },
+          cache: 'no-store',
+          signal: controller.signal
+        });
+        const text = await res.text();
+        output.textContent = res.status + ' ' + res.statusText + '\\n\\n' + text;
+      } catch (error) {
+        output.textContent = error.name === 'AbortError' ? 'Timed out after 8000 ms.' : String(error);
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+    for (const button of document.querySelectorAll('button[data-url]')) {
+      button.addEventListener('click', () => callPath(button.dataset.url));
+    }
+  </script>
+</body>
+</html>`;
+}
+
 async function paymentGate(config, path) {
   if (config.gatewayMode === "mock") {
     return mockPaymentGate(config, path);
@@ -173,6 +270,15 @@ export async function createProxyApp(config = loadConfig()) {
     } catch (error) {
       next(error);
     }
+  });
+
+  app.get(["/", "/demo"], (req, res) => {
+    const publicBaseUrl = config.publicBaseUrl || `${req.protocol}://${req.get("host")}`;
+    res
+      .status(200)
+      .set("Cache-Control", "no-store")
+      .type("html")
+      .send(demoPage(config, publicBaseUrl, path));
   });
 
   if (config.architecture === "cloud") {

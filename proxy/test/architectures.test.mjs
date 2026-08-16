@@ -111,6 +111,23 @@ describe("mock x402 proxy architectures", () => {
     assert.equal((await request(app).get("/openapi.json")).status, 200);
   });
 
+  it("serves a public browser demo page from the proxy", async () => {
+    const app = await createProxyApp({
+      architecture: "cloud",
+      gatewayMode: "mock",
+      sensorOrigin: upstream.origin,
+      sellerAddress: "0x0000000000000000000000000000000000000000",
+      priceUsd: "0.001",
+      publicBaseUrl: "https://x402-temperature.example",
+    });
+
+    const demo = await request(app).get("/demo");
+    assert.equal(demo.status, 200);
+    assert.match(demo.text, /x402 Temperature Public Demo/);
+    assert.match(demo.text, /https:\/\/x402-temperature\.example\/temperature\/latest/);
+    assert.match(demo.text, /GET \/temperature\/latest/);
+  });
+
   it("passes authenticated cloud station ingest through without buyer payment", async () => {
     const app = await createProxyApp({
       architecture: "cloud",
