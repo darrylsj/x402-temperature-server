@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from .config import Settings
 from .payment import install_x402
-from .sensors import TemperatureSensor, build_sensor, utc_now_iso
+from .sensors import TemperatureSensor, build_sensor, read_cpu_temperature_celsius, utc_now_iso
 
 
 class TemperatureResponse(BaseModel):
@@ -29,6 +29,8 @@ class TemperatureResponse(BaseModel):
     lon: float = Field(description="Rounded longitude. Do not publish exact home coordinates.")
     battery_percent: float | None = None
     battery_voltage: float | None = None
+    device_cpu_celsius: float | None = None
+    device_cpu_fahrenheit: float | None = None
 
 
 class SensorReadingIngest(BaseModel):
@@ -39,6 +41,7 @@ class SensorReadingIngest(BaseModel):
     read_at: str
     battery_percent: float | None = None
     battery_voltage: float | None = None
+    device_cpu_celsius: float | None = None
 
 
 def _parse_utc(value: str) -> datetime:
@@ -63,6 +66,14 @@ def _validate_reading(reading: SensorReadingIngest) -> None:
         raise HTTPException(status_code=422, detail="humidity must be between 0 and 100")
     if reading.pressure_hpa is not None and not 800 <= reading.pressure_hpa <= 1200:
         raise HTTPException(status_code=422, detail="pressure_hpa is outside expected environmental range")
+    if reading.device_cpu_celsius is not None and not -20 <= reading.device_cpu_celsius <= 120:
+        raise HTTPException(status_code=422, detail="device_cpu_celsius is outside expected device range")
+
+
+def _cpu_fahrenheit(celsius: float | None) -> float | None:
+    if celsius is None:
+        return None
+    return round((celsius * 9 / 5) + 32, 2)
 
 
 def _validate_reading_age(read_at: datetime, max_age_seconds: int) -> None:
@@ -306,6 +317,8 @@ def create_app(settings: Settings | None = None, sensor: TemperatureSensor | Non
     def temperature() -> TemperatureResponse:
         reading = sensor.read()
         celsius = round(reading.celsius, 2)
+        cpu_celsius = read_cpu_temperature_celsius()
+        rounded_cpu_celsius = None if cpu_celsius is None else round(cpu_celsius, 2)
         return TemperatureResponse(
             station=settings.station_id,
             location=settings.location_label,
@@ -319,6 +332,8 @@ def create_app(settings: Settings | None = None, sensor: TemperatureSensor | Non
             stale=False,
             lat=round(settings.latitude, 2),
             lon=round(settings.longitude, 2),
+            device_cpu_celsius=rounded_cpu_celsius,
+            device_cpu_fahrenheit=_cpu_fahrenheit(rounded_cpu_celsius),
         )
 
     if settings.enable_cloud_collector:
@@ -359,6 +374,8 @@ def create_app(settings: Settings | None = None, sensor: TemperatureSensor | Non
                 lon=round(settings.longitude, 2),
                 battery_percent=reading.battery_percent,
                 battery_voltage=reading.battery_voltage,
+                device_cpu_celsius=None if reading.device_cpu_celsius is None else round(reading.device_cpu_celsius, 2),
+                device_cpu_fahrenheit=_cpu_fahrenheit(reading.device_cpu_celsius),
             )
 
     @app.get("/.well-known/x402-temperature.json")

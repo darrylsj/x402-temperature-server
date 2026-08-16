@@ -68,6 +68,16 @@ LOCAL_SENSOR_URL=http://127.0.0.1:8080/temperature \
 python3 scripts/publish-reading.py
 ```
 
+Until an outdoor temperature sensor is installed, the live cloud deployment publishes public Danville hourly weather from the National Weather Service:
+
+```bash
+STATION_INGEST_TOKEN=replace-with-random-token \
+CLOUD_INGEST_URL=https://x402-temperature.ngrok.app/sensor-readings \
+python3 scripts/publish-danville-weather.py
+```
+
+The direct edge endpoint still reads from the x402host Pi. In simulated mode it includes `device_cpu_celsius` and `device_cpu_fahrenheit` from the Pi's local CPU thermal zone when available.
+
 ## Recommended Demo Topology
 
 ```text

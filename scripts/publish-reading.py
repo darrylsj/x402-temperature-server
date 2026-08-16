@@ -56,6 +56,7 @@ def main() -> int:
         "read_at": reading["read_at"],
         "battery_percent": reading.get("battery_percent"),
         "battery_voltage": reading.get("battery_voltage"),
+        "device_cpu_celsius": reading.get("device_cpu_celsius"),
     }
     result = post_json(
         CLOUD_INGEST_URL,

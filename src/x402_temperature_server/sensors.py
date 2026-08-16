@@ -17,6 +17,20 @@ class SensorReading:
     pressure_hpa: float | None = None
 
 
+def read_cpu_temperature_celsius(path: str = "/sys/class/thermal/thermal_zone0/temp") -> float | None:
+    thermal_path = Path(path)
+    if not thermal_path.exists():
+        return None
+    try:
+        raw = thermal_path.read_text().strip()
+        if not raw:
+            return None
+        value = float(raw)
+    except (OSError, ValueError):
+        return None
+    return value / 1000.0 if value > 1000 else value
+
+
 class TemperatureSensor:
     def read(self) -> SensorReading:
         raise NotImplementedError
