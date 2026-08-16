@@ -10,6 +10,18 @@ The current public sample endpoint is:
 https://x402-temperature.ngrok.app
 ```
 
+Current live deployment:
+
+```text
+x402host Raspberry Pi on the home LAN
+  -> publishes simulated Danville readings every minute
+  -> https://x402-temperature.ngrok.app/sensor-readings
+  -> SIM cloud server collector
+  -> paid cloud route: GET /temperature/latest
+```
+
+The SIM cloud server keeps the Python collector and Node Gateway proxy bound to localhost; ngrok provides the public HTTPS entrypoint.
+
 For real seller testing, this URL should point at the Node/Express Circle Gateway proxy, not directly at the Python mock gate:
 
 ```text
