@@ -11,7 +11,13 @@ from pydantic import BaseModel, Field
 
 from .config import Settings
 from .payment import install_x402
-from .sensors import TemperatureSensor, build_sensor, read_cpu_temperature_celsius, utc_now_iso
+from .sensors import (
+    TemperatureSensor,
+    build_sensor,
+    read_cpu_temperature_celsius,
+    read_system_uptime_seconds,
+    utc_now_iso,
+)
 
 
 class TemperatureResponse(BaseModel):
@@ -74,6 +80,25 @@ def _cpu_fahrenheit(celsius: float | None) -> float | None:
     if celsius is None:
         return None
     return round((celsius * 9 / 5) + 32, 2)
+
+
+def _station_health(settings: Settings) -> dict[str, object]:
+    cpu_celsius = read_cpu_temperature_celsius()
+    uptime_seconds = read_system_uptime_seconds()
+    return {
+        "uptime_seconds": uptime_seconds,
+        "device_cpu_celsius": None if cpu_celsius is None else round(cpu_celsius, 2),
+        "device_cpu_fahrenheit": _cpu_fahrenheit(cpu_celsius),
+        "power": {
+            "source": settings.power_source_label,
+            "measurement": "estimated",
+            "estimated_watts": round(settings.estimated_power_watts, 2),
+            "estimated_wh_per_day": round(settings.estimated_power_watts * 24, 1),
+            "measured_watts": None,
+            "battery_percent": None,
+            "battery_voltage": None,
+        },
+    }
 
 
 def _validate_reading_age(read_at: datetime, max_age_seconds: int) -> None:
@@ -304,13 +329,14 @@ def create_app(settings: Settings | None = None, sensor: TemperatureSensor | Non
         return HTMLResponse(_simple_page(settings), headers={"Cache-Control": "no-store"})
 
     @app.get("/health")
-    def health() -> dict[str, str | bool]:
+    def health() -> dict[str, object]:
         return {
             "ok": True,
             "station": settings.station_id,
             "paid_route": settings.enable_x402 or settings.enable_mock_x402,
             "x402_mode": "mock" if settings.enable_mock_x402 else ("direct" if settings.enable_x402 else "off"),
             "collector": settings.enable_cloud_collector,
+            "station_health": _station_health(settings),
         }
 
     @app.get("/temperature", response_model=TemperatureResponse)
@@ -400,6 +426,7 @@ def create_app(settings: Settings | None = None, sensor: TemperatureSensor | Non
                 "lat": round(settings.latitude, 2),
                 "lon": round(settings.longitude, 2),
             },
+            "station_health": _station_health(settings),
         }
 
     if settings.enable_mock_x402:

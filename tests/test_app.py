@@ -20,13 +20,15 @@ def client() -> TestClient:
 def test_health() -> None:
     response = client().get("/health")
     assert response.status_code == 200
-    assert response.json() == {
-        "ok": True,
-        "station": "roof-test-01",
-        "paid_route": False,
-        "x402_mode": "off",
-        "collector": False,
-    }
+    payload = response.json()
+    assert payload["ok"] is True
+    assert payload["station"] == "roof-test-01"
+    assert payload["paid_route"] is False
+    assert payload["x402_mode"] == "off"
+    assert payload["collector"] is False
+    assert payload["station_health"]["power"]["measurement"] == "estimated"
+    assert payload["station_health"]["power"]["estimated_watts"] == 1.5
+    assert payload["station_health"]["power"]["measured_watts"] is None
 
 
 def test_temperature_payload() -> None:
@@ -55,6 +57,7 @@ def test_free_manifest_names_paid_route() -> None:
     assert payload["architecture"] == "self-contained-edge"
     assert payload["paid_endpoint"] == "GET /temperature"
     assert payload["price_usd"] == "0.001"
+    assert payload["station_health"]["power"]["estimated_wh_per_day"] == 36.0
 
 
 def test_browser_demo_page_points_to_paid_route() -> None:

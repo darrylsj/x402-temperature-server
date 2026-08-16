@@ -31,6 +31,17 @@ def read_cpu_temperature_celsius(path: str = "/sys/class/thermal/thermal_zone0/t
     return value / 1000.0 if value > 1000 else value
 
 
+def read_system_uptime_seconds(path: str = "/proc/uptime") -> int | None:
+    uptime_path = Path(path)
+    if not uptime_path.exists():
+        return None
+    try:
+        raw = uptime_path.read_text().split()[0]
+        return int(float(raw))
+    except (OSError, ValueError, IndexError):
+        return None
+
+
 class TemperatureSensor:
     def read(self) -> SensorReading:
         raise NotImplementedError

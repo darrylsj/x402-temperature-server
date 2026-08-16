@@ -43,6 +43,8 @@ class Settings:
     enable_cloud_collector: bool = False
     station_ingest_token: str = ""
     ingest_max_age_seconds: int = 900
+    power_source_label: str = "usb-wall-power"
+    estimated_power_watts: float = 1.5
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -68,4 +70,6 @@ class Settings:
             enable_cloud_collector=_bool(os.getenv("ENABLE_CLOUD_COLLECTOR"), False),
             station_ingest_token=os.getenv("STATION_INGEST_TOKEN", ""),
             ingest_max_age_seconds=_int("INGEST_MAX_AGE_SECONDS", 900),
+            power_source_label=os.getenv("POWER_SOURCE_LABEL", "usb-wall-power"),
+            estimated_power_watts=_float("ESTIMATED_POWER_WATTS", 1.5),
         )
