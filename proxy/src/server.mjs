@@ -100,6 +100,28 @@ async function forwardJson(req, res, config, upstreamPath) {
   res.send(text);
 }
 
+async function forwardIngest(req, res, config) {
+  const upstream = new URL("/sensor-readings", config.sensorOrigin);
+  const headers = {
+    accept: "application/json",
+    "content-type": "application/json",
+  };
+  const stationToken = req.get("x-station-token");
+  if (stationToken) {
+    headers["x-station-token"] = stationToken;
+  }
+
+  const response = await fetch(upstream, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(req.body || {}),
+  });
+  const text = await response.text();
+  res.status(response.status);
+  res.type(response.headers.get("content-type") || "application/json");
+  res.send(text);
+}
+
 async function forwardManifest(req, res, config) {
   const upstream = new URL("/.well-known/x402-temperature.json", config.sensorOrigin);
   const response = await fetch(upstream, { headers: { accept: "application/json" } });
@@ -124,6 +146,7 @@ async function forwardManifest(req, res, config) {
 
 export async function createProxyApp(config = loadConfig()) {
   const app = express();
+  app.use(express.json({ limit: "32kb" }));
   const path = paidPath(config);
   const gate = await paymentGate(config, path);
 
@@ -150,6 +173,16 @@ export async function createProxyApp(config = loadConfig()) {
       next(error);
     }
   });
+
+  if (config.architecture === "cloud") {
+    app.post("/sensor-readings", async (req, res, next) => {
+      try {
+        await forwardIngest(req, res, config);
+      } catch (error) {
+        next(error);
+      }
+    });
+  }
 
   app.get(path, gate, async (req, res, next) => {
     try {

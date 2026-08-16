@@ -2,7 +2,7 @@
 
 Use ngrok when the Pi is on a private home LAN but buyer agents need a public HTTPS URL.
 
-This is the quickest demo path. It avoids router port-forwarding, public DNS, and home firewall changes. It is still a demo path: for a real paid service, prefer the cloud collector architecture or a stable tunnel/domain with the Circle Gateway proxy.
+This is the quickest demo path. It avoids router port-forwarding, public DNS, and home firewall changes. For a cloud-connected seller, run the collector/proxy on a public server and point the stable ngrok endpoint at that server instead of at the home LAN.
 
 The current public sample endpoint is:
 
@@ -17,6 +17,24 @@ ngrok HTTPS
   -> local proxy on :3090
   -> SSH forward on :18080
   -> Pi Python temperature service on x402host:8080
+```
+
+For the cloud collector architecture, the same stable endpoint fronts the cloud server proxy:
+
+```text
+ngrok HTTPS
+  -> ngrok agent on the cloud server
+  -> Node/Express Circle Gateway proxy on 127.0.0.1:3090
+  -> Python cloud collector on 127.0.0.1:8091
+```
+
+The Pi publishes readings to the cloud collector through the public endpoint:
+
+```bash
+STATION_INGEST_TOKEN=replace-with-random-token \
+CLOUD_INGEST_URL=https://x402-temperature.ngrok.app/sensor-readings \
+LOCAL_SENSOR_URL=http://127.0.0.1:8080/temperature \
+python3 scripts/publish-reading.py
 ```
 
 ## Recommended Demo Topology
@@ -95,13 +113,13 @@ curl -H 'ngrok-skip-browser-warning: true' "$URL/health"
 The unpaid paid route should return `402 Payment Required` with Circle Gateway payment requirements:
 
 ```bash
-curl -i -H 'ngrok-skip-browser-warning: true' "$URL/temperature"
+curl -i -H 'ngrok-skip-browser-warning: true' "$URL/temperature/latest"
 ```
 
 Circle's read-only inspect command should report the endpoint as payable:
 
 ```bash
-circle services inspect "$URL/temperature" --output json
+circle services inspect "$URL/temperature/latest" --output json
 ```
 
 The `ngrok-skip-browser-warning` header is useful for automated agents and scripts that should bypass ngrok's browser interstitial. The `x-payment: test-paid` header only works in local mock mode; it is not a real payment.
