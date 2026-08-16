@@ -58,7 +58,7 @@ READ_AT="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 curl -fsS -X POST "http://127.0.0.1:${CLOUD_SENSOR_PORT}/sensor-readings" \
   -H 'Content-Type: application/json' \
   -H "X-Station-Token: ${TOKEN}" \
-  -d "{\"station\":\"roof-demo-01\",\"celsius\":21.42,\"humidity\":48.3,\"pressure_hpa\":1013.2,\"read_at\":\"${READ_AT}\",\"battery_percent\":84,\"battery_voltage\":5.08}" >/dev/null
+  -d "{\"station\":\"danville-demo-01\",\"celsius\":22.22,\"humidity\":54.0,\"pressure_hpa\":1017.0,\"read_at\":\"${READ_AT}\",\"battery_percent\":84,\"battery_voltage\":5.08}" >/dev/null
 
 cd "$ROOT_DIR/proxy"
 

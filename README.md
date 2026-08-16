@@ -6,6 +6,8 @@ This is the companion implementation for the weather-bot chapter of *The x402 Ha
 
 No physical sensor is required for the first demo. The default `simulated` backend produces realistic temperature, humidity, and pressure readings so the API and x402 payment flow can be tested before the BME280 arrives.
 
+The checked-in demo defaults to a city-level Danville, CA station using rounded town coordinates and a current local-weather seed from the nearest public weather observation/forecast. It does not publish a home address or exact private coordinates.
+
 ![Raspberry Pi Zero 2 W connected to a BME280 sensor over I2C](docs/images/pi-zero-2w-bme280-wiring.jpg)
 
 ## Repository Status
@@ -23,18 +25,18 @@ No physical sensor is required for the first demo. The default `simulated` backe
 
 ```json
 {
-  "station": "roof-demo-01",
-  "location": "Neighborhood station",
-  "celsius": 21.42,
-  "fahrenheit": 70.56,
-  "humidity": 48.3,
-  "pressure_hpa": 1013.2,
+  "station": "danville-demo-01",
+  "location": "Danville, CA",
+  "celsius": 22.22,
+  "fahrenheit": 72.00,
+  "humidity": 54.0,
+  "pressure_hpa": 1017.0,
   "read_at": "2026-08-12T08:00:00Z",
   "ttl_seconds": 60,
   "age_seconds": 0,
   "stale": false,
-  "lat": 37.33,
-  "lon": -121.89
+  "lat": 37.82,
+  "lon": -122.00
 }
 ```
 
@@ -175,8 +177,10 @@ Expected health response:
 ```json
 {
   "ok": true,
-  "station": "roof-demo-01",
-  "paid_route": false
+  "station": "danville-demo-01",
+  "paid_route": false,
+  "x402_mode": "off",
+  "collector": false
 }
 ```
 
@@ -274,7 +278,7 @@ Cloud `.env`:
 
 ```bash
 ENABLE_CLOUD_COLLECTOR=true
-STATION_ID=roof-demo-01
+STATION_ID=danville-demo-01
 STATION_INGEST_TOKEN=replace-with-random-token
 READING_TTL_SECONDS=180
 INGEST_MAX_AGE_SECONDS=900
@@ -288,10 +292,10 @@ curl -X POST http://127.0.0.1:8080/sensor-readings \
   -H 'Content-Type: application/json' \
   -H 'X-Station-Token: replace-with-random-token' \
   -d '{
-    "station": "roof-demo-01",
-    "celsius": 21.42,
-    "humidity": 48.3,
-    "pressure_hpa": 1013.2,
+    "station": "danville-demo-01",
+    "celsius": 22.22,
+    "humidity": 54.0,
+    "pressure_hpa": 1017.0,
     "read_at": "2026-08-12T08:00:00Z",
     "battery_percent": 84,
     "battery_voltage": 5.08

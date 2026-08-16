@@ -182,7 +182,7 @@ def test_cloud_collector_sample_starts_with_seeded_simulated_reading() -> None:
 
     paid = test_client.get("/temperature/latest", headers={"x-payment": "test-paid"})
     assert paid.status_code == 200
-    assert paid.json()["station"] == "roof-demo-01"
+    assert paid.json()["station"] == "danville-demo-01"
     assert paid.json()["celsius"] == 18.2
 
 

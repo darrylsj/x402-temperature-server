@@ -363,6 +363,7 @@ def create_app(settings: Settings | None = None, sensor: TemperatureSensor | Non
 
     @app.get("/.well-known/x402-temperature.json")
     def manifest() -> dict[str, object]:
+        sample_celsius = round(settings.simulated_base_celsius, 2)
         return {
             "name": "x402 Temperature Server",
             "station": settings.station_id,
@@ -373,11 +374,14 @@ def create_app(settings: Settings | None = None, sensor: TemperatureSensor | Non
             "ttl_seconds": settings.reading_ttl_seconds,
             "sample": {
                 "station": settings.station_id,
-                "celsius": 21.42,
-                "fahrenheit": 70.56,
+                "location": settings.location_label,
+                "celsius": sample_celsius,
+                "fahrenheit": round((sample_celsius * 9 / 5) + 32, 2),
                 "read_at": "2026-08-12T08:00:00Z",
                 "age_seconds": 0,
                 "stale": False,
+                "lat": round(settings.latitude, 2),
+                "lon": round(settings.longitude, 2),
             },
         }
 

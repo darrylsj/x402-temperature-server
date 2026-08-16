@@ -81,10 +81,10 @@ Edit `.env`:
 
 ```bash
 SENSOR_BACKEND=bme280
-STATION_ID=roof-demo-01
-LOCATION_LABEL=Neighborhood station
-LATITUDE=37.33
-LONGITUDE=-121.89
+STATION_ID=danville-demo-01
+LOCATION_LABEL="Danville, CA"
+LATITUDE=37.82
+LONGITUDE=-122.00
 READING_TTL_SECONDS=60
 I2C_ADDRESS=0x76
 ENABLE_X402=false
@@ -153,7 +153,7 @@ Enable the runnable in-memory collector:
 
 ```bash
 ENABLE_CLOUD_COLLECTOR=true
-STATION_ID=roof-demo-01
+STATION_ID=danville-demo-01
 STATION_INGEST_TOKEN=replace-with-random-token
 READING_TTL_SECONDS=180
 INGEST_MAX_AGE_SECONDS=900
@@ -168,10 +168,10 @@ curl -X POST https://YOUR-CLOUD-HOST/sensor-readings \
   -H 'Content-Type: application/json' \
   -H 'X-Station-Token: replace-with-random-token' \
   -d '{
-    "station": "roof-demo-01",
-    "celsius": 21.42,
-    "humidity": 48.3,
-    "pressure_hpa": 1013.2,
+    "station": "danville-demo-01",
+    "celsius": 22.22,
+    "humidity": 54.0,
+    "pressure_hpa": 1017.0,
     "read_at": "2026-08-12T08:00:00Z",
     "battery_percent": 84,
     "battery_voltage": 5.08

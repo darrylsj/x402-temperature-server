@@ -1,14 +1,14 @@
 {
-  "station": "roof-demo-01",
-  "location": "Neighborhood station",
-  "celsius": 21.42,
-  "fahrenheit": 70.56,
-  "humidity": 48.3,
-  "pressure_hpa": 1013.2,
+  "station": "danville-demo-01",
+  "location": "Danville, CA",
+  "celsius": 22.22,
+  "fahrenheit": 72.00,
+  "humidity": 54.0,
+  "pressure_hpa": 1017.0,
   "read_at": "2026-08-12T08:00:00Z",
   "ttl_seconds": 60,
   "age_seconds": 0,
   "stale": false,
-  "lat": 37.33,
-  "lon": -121.89
+  "lat": 37.82,
+  "lon": -122.00
 }
