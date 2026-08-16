@@ -15,6 +15,7 @@ export function loadConfig(env = process.env) {
   return {
     architecture,
     gatewayMode,
+    host: env.HOST || "",
     port: Number(env.PORT || "3090"),
     sensorOrigin: env.SENSOR_ORIGIN || "http://127.0.0.1:8080",
     sellerAddress: env.SELLER_ADDRESS || "0x0000000000000000000000000000000000000000",
@@ -206,9 +207,9 @@ export async function createProxyApp(config = loadConfig()) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const config = loadConfig();
   const app = await createProxyApp(config);
-  app.listen(config.port, () => {
+  app.listen(config.port, config.host || undefined, () => {
     console.log(
-      `x402 temperature proxy listening on :${config.port} (${config.architecture}, ${config.gatewayMode})`,
+      `x402 temperature proxy listening on ${config.host || "0.0.0.0"}:${config.port} (${config.architecture}, ${config.gatewayMode})`,
     );
   });
 }
