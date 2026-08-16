@@ -67,6 +67,16 @@ def test_browser_demo_page_points_to_paid_route() -> None:
     assert "Timed out after" in response.text
 
 
+def test_simple_page_has_no_javascript_dependency() -> None:
+    response = client().get("/simple")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert "Simple View" in response.text
+    assert "no JavaScript" in response.text
+    assert 'href="/health"' in response.text
+    assert 'href="/temperature"' in response.text
+
+
 def test_openapi_marks_paid_edge_operation_for_agents() -> None:
     payload = client().get("/openapi.json").json()
     assert payload["info"]["x-guidance"]

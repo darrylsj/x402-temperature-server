@@ -210,6 +210,35 @@ def _demo_page(settings: Settings) -> str:
 </html>"""
 
 
+def _simple_page(settings: Settings) -> str:
+    paid_path = _paid_endpoint(settings)
+    architecture = "Cloud collector" if settings.enable_cloud_collector else "Self-contained edge"
+    paid_url = paid_path
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>x402 Temperature Server Simple View</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; margin: 2rem; line-height: 1.5; max-width: 760px; }}
+    a {{ display: block; margin: 0.5rem 0; }}
+    code {{ background: #f4f4f4; padding: 0.1rem 0.25rem; }}
+  </style>
+</head>
+<body>
+  <h1>x402 Temperature Server Simple View</h1>
+  <p>This page is intentionally plain HTML with no JavaScript.</p>
+  <p><strong>Architecture:</strong> {architecture}</p>
+  <p><strong>Paid route:</strong> <code>GET {paid_path}</code></p>
+  <a href="/health">Open health JSON</a>
+  <a href="/.well-known/x402-temperature.json">Open discovery manifest JSON</a>
+  <a href="{paid_url}">Open paid route directly. A normal browser should see a 402 challenge.</a>
+  <a href="/demo">Open JavaScript demo page</a>
+</body>
+</html>"""
+
+
 def _install_mock_x402(app: FastAPI, settings: Settings) -> None:
     paid_path = _paid_endpoint(settings)
 
@@ -258,6 +287,10 @@ def create_app(settings: Settings | None = None, sensor: TemperatureSensor | Non
     @app.get("/demo", response_class=HTMLResponse)
     def demo() -> HTMLResponse:
         return HTMLResponse(_demo_page(settings), headers={"Cache-Control": "no-store"})
+
+    @app.get("/simple", response_class=HTMLResponse)
+    def simple() -> HTMLResponse:
+        return HTMLResponse(_simple_page(settings), headers={"Cache-Control": "no-store"})
 
     @app.get("/health")
     def health() -> dict[str, str | bool]:
