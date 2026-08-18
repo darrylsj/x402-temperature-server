@@ -59,6 +59,11 @@ ngrok HTTPS at https://x402-temperature-edge.ngrok.app
 
 Because the current edge station is simulated, the public edge proxy runs with `FORWARD_MOCK_PAYMENT=true`. The public facilitator verifies the buyer payment at the proxy, then the proxy forwards `x-payment: test-paid` to the Pi's local mock gate so the simulated sensor service does not issue a second local challenge.
 
+For reboot survival, the Pi app should be managed by systemd and the Mac-side
+ngrok, SSH tunnel, and x402 proxy should be managed by LaunchAgents. See
+[Reboot Survival Runbook](reboot-survival.md) for the exact health checks and
+recovery sequence.
+
 ## Facilitator Split
 
 This repo intentionally keeps the two public architectures on different hosted facilitator paths:

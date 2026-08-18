@@ -121,6 +121,28 @@ Read logs:
 journalctl -u x402-temperature-server -f
 ```
 
+The checked-in service template assumes an `/opt/x402-temperature-server`
+install and a `pi` runtime user. If the repo is kept under a user's home
+directory, update `WorkingDirectory`, `EnvironmentFile`, `ExecStart`, and
+`User` before enabling the service.
+
+The live `x402host` deployment uses this shape:
+
+```ini
+[Service]
+WorkingDirectory=/home/james/projects/x402-temperature-server
+EnvironmentFile=-/home/james/projects/x402-temperature-server/.env
+ExecStart=/home/james/projects/x402-temperature-server/.venv/bin/python -m x402_temperature_server
+Restart=always
+RestartSec=5
+User=james
+```
+
+After installing systemd, remove any crontab fallback that starts the FastAPI
+server directly. Keep only publisher crons that post readings to the cloud
+collector. The full reboot-survival checklist is in
+[reboot-survival.md](reboot-survival.md).
+
 ## 6. Cloud Collector Design
 
 In this design the Pi posts readings to a cloud server and the cloud server handles x402.
@@ -266,6 +288,8 @@ Before calling the station production-ready:
 - Sensor timestamp is current.
 - Response includes `age_seconds` and `stale`.
 - Service restarts after reboot.
+- No user crontab fallback is required to start the FastAPI server.
+- Public edge and cloud unpaid paid routes return `402`, not `200` or `500`.
 - Logs show no sensor read errors.
 - Free manifest is reachable.
 - Unpaid paid-resource request returns `402`.

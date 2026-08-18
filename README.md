@@ -18,6 +18,7 @@ The checked-in demo defaults to a Danville, CA station using Sycamore Valley Par
 - Supported sensors: simulated, mock, BME280, DS18B20
 - Current tests: Python API tests plus Node proxy architecture tests
 - Default mode: local simulated sensor, x402 disabled
+- Reboot survival: Pi app runs under systemd; see [Reboot Survival Runbook](docs/reboot-survival.md)
 
 ## What It Sells
 
@@ -218,6 +219,11 @@ Run it:
 ```bash
 python -m x402_temperature_server
 ```
+
+For unattended/reboot-safe operation, install the systemd service and verify
+the public tunnels with the [Reboot Survival Runbook](docs/reboot-survival.md).
+The app should not depend on a manually-open shell after a device move or power
+cycle.
 
 ## x402 Production Mode
 
@@ -420,6 +426,7 @@ Current tests cover:
 - `docs/hardware-ordering.md` - ordering list and shopping notes
 - `docs/hardware-diagrams.md` - wiring diagrams
 - `docs/software-runbook.md` - Pi and service setup
+- `docs/reboot-survival.md` - systemd, tunnel, sudo, cron, and daily health-check runbook
 - `docs/architecture-options.md` - cloud collector vs self-contained Pi design
 - `docs/field-design-recommendations.md` - accepted, deferred, and rejected recommendations
 - `docs/solar-power.md` - solar and battery sizing
