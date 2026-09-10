@@ -156,6 +156,17 @@ Confirmed:
 - Two public demo URLs. The cloud/SIM route is the Circle Gateway reference design. The direct edge/Pi route is the Coinbase CDP facilitator reference design.
 - Live Coinbase edge seller. The public edge deployment now runs with `X402_GATEWAY_MODE=coinbase`; its manifest reports `gateway_mode: "coinbase"` and facilitator `Coinbase CDP`. A legacy Coinbase account/trading API key is not a CDP x402 facilitator credential.
 
+## The x402 Handbook Companion
+
+This public repository is also the reader link hub for *The x402 Handbook*. Start here for the runnable temperature-server build packet and the public companion/source notes that the printed book cites:
+
+- [Handbook companion hub](docs/x402-handbook-companion.md)
+- [ResolveBots Trust Index methods and scoring note](docs/resolvebots-trust-index-methods-and-scoring-2026-09-07.md)
+- [August 8 StableTravel field-note summary](docs/august-8-stabletravel-field-note-2026-09-07.md)
+- [August 10 research-report and Box bundle field note](docs/august-10-research-report-and-box-field-note-2026-09-07.md)
+- [Operator discussion source note](docs/operator-discussion-source-note-2026-09-07.md)
+- [Paid buyer test](docs/paid-buyer-test.md)
+
 ## Local Quick Start
 
 Run the app on a development machine with the simulated sensor:
