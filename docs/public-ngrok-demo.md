@@ -121,7 +121,7 @@ ssh -f \
   -o ServerAliveCountMax=3 \
   -N \
   -L 0.0.0.0:18080:127.0.0.1:8080 \
-  james@10.0.0.24
+  james@x402host.local
 ```
 
 Then create a separate ngrok tunnel that forwards to the local port-forward:
@@ -152,7 +152,7 @@ ssh \
   -o ServerAliveCountMax=3 \
   -N \
   -L 0.0.0.0:18080:127.0.0.1:8080 \
-  james@10.0.0.24
+  james@x402host.local
 ```
 
 ## Public Seller Smoke Test

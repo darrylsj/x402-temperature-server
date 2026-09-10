@@ -27,10 +27,14 @@ Live host assumptions:
 ```text
 Pi host: x402host.local
 LAN IP: 10.0.0.24
+SSH user: james
 Service: x402-temperature-server
 Repo/app path: /home/james/projects/x402-temperature-server
 Local app URL on Pi: http://127.0.0.1:8080
 ```
+
+Use `james@x402host.local` for SSH. The default Raspberry Pi account is not
+valid for this host.
 
 Install or refresh the service on the Pi:
 
@@ -150,7 +154,7 @@ and the SSH forward before changing the Pi service.
 The daily check should verify all layers without making a paid purchase:
 
 ```bash
-ssh james@10.0.0.24 'sudo -n systemctl is-enabled x402-temperature-server && sudo -n systemctl is-active x402-temperature-server && curl -fsS http://127.0.0.1:8080/health'
+ssh james@x402host.local 'sudo -n systemctl is-enabled x402-temperature-server && sudo -n systemctl is-active x402-temperature-server && curl -fsS http://127.0.0.1:8080/health'
 
 curl -fsS -H 'ngrok-skip-browser-warning: true' https://x402-temperature-edge.ngrok.app/health
 curl -fsS -H 'ngrok-skip-browser-warning: true' https://x402-temperature.ngrok.app/health
@@ -168,7 +172,7 @@ Expected paid-route HTTP status for both unpaid calls:
 If `systemctl is-active` is not `active`, restart the service once and recheck:
 
 ```bash
-ssh james@10.0.0.24 'sudo -n systemctl restart x402-temperature-server && sleep 5 && sudo -n systemctl is-active x402-temperature-server && curl -fsS http://127.0.0.1:8080/health'
+ssh james@x402host.local 'sudo -n systemctl restart x402-temperature-server && sleep 5 && sudo -n systemctl is-active x402-temperature-server && curl -fsS http://127.0.0.1:8080/health'
 ```
 
 ## 6. Reboot Test
