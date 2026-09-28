@@ -20,8 +20,8 @@ sensor = [
   "adafruit-circuitpython-bme280>=2.6.0"
 ]
 x402 = [
-  "cdp-sdk>=1.28.0",
-  "x402[evm,svm,fastapi]>=0.5.0"
+  "cdp-sdk>=1.48.1,<2",
+  "x402[evm,svm,fastapi]>=2.24.0,<3"
 ]
 dev = [
   "pytest>=8.4.0",
