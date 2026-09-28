@@ -34,12 +34,22 @@ function paidPath(config) {
   return config.architecture === "cloud" ? "/temperature/latest" : "/temperature";
 }
 
-function paymentRequiredBody(config, path) {
+function paymentRequiredBody(config, path, resourceUrl = path) {
+  const usdcAssets = {
+    "eip155:8453": {
+      address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      name: "USD Coin",
+    },
+    "eip155:84532": {
+      address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      name: "USDC",
+    },
+  };
+  const asset = usdcAssets["eip155:84532"];
   return {
     x402Version: 2,
     resource: {
-      method: "GET",
-      path,
+      url: resourceUrl,
       description:
         config.architecture === "cloud"
           ? "Latest posted simulated temperature reading from the cloud collector."
@@ -49,10 +59,12 @@ function paymentRequiredBody(config, path) {
     accepts: [
       {
         scheme: "exact",
-        network: "circle-gateway-testnet",
-        asset: "USDC",
-        amount: config.priceUsd,
+        network: "eip155:84532",
+        asset: asset.address,
+        amount: String(Math.round(Number(config.priceUsd) * 1_000_000)),
         payTo: config.sellerAddress,
+        maxTimeoutSeconds: 300,
+        extra: { name: asset.name, version: "2" },
       },
     ],
   };
@@ -60,7 +72,7 @@ function paymentRequiredBody(config, path) {
 
 function mockPaymentGate(config, path) {
   return (req, res, next) => {
-    const paidHeader = req.get("x-payment") || req.get("payment");
+    const paidHeader = req.get("x-mock-payment");
     if (paidHeader === "test-paid") {
       req.payment = {
         verified: true,
@@ -71,7 +83,8 @@ function mockPaymentGate(config, path) {
       next();
       return;
     }
-    const body = paymentRequiredBody(config, path);
+    const publicBaseUrl = config.publicBaseUrl || `${req.protocol}://${req.get("host")}`;
+    const body = paymentRequiredBody(config, path, new URL(path, publicBaseUrl).toString());
     res
       .status(402)
       .set("payment-required", Buffer.from(JSON.stringify(body)).toString("base64"))
@@ -109,7 +122,7 @@ function demoPage(config, publicBaseUrl, path) {
       ? `circle services pay ${paidUrl} -X GET --address "$BUYER_ADDRESS" --chain MATIC-AMOY --max-amount ${config.priceUsd} --output json`
       : config.gatewayMode === "coinbase"
         ? `CDP_API_KEY_ID=... CDP_API_KEY_SECRET=... CDP_WALLET_SECRET=... node scripts/pay-coinbase-client.mjs ${paidUrl}`
-        : `curl -H 'x-payment: test-paid' ${paidUrl}`;
+        : `curl -H 'x-mock-payment: test-paid' ${paidUrl}`;
 
   return `<!doctype html>
 <html lang="en">
@@ -254,14 +267,14 @@ async function forwardJson(req, res, config, upstreamPath) {
   const upstream = new URL(upstreamPath, config.sensorOrigin);
   const headers = { accept: "application/json" };
   if (config.forwardMockPayment && upstreamPath === paidPath(config)) {
-    headers["x-payment"] = "test-paid";
+    headers["x-mock-payment"] = "test-paid";
   }
   const response = await fetch(upstream, { headers });
   const text = await response.text();
   res.status(response.status);
   res.type(response.headers.get("content-type") || "application/json");
   if (req.payment) {
-    res.set("x-payment-verified", "true");
+    res.set("x-mock-payment-verified", "true");
   }
   res.send(text);
 }

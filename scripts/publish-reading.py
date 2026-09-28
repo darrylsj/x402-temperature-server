@@ -47,7 +47,7 @@ def main() -> int:
         print("STATION_INGEST_TOKEN is required", file=sys.stderr)
         return 2
 
-    reading = fetch_json(LOCAL_SENSOR_URL, {"x-payment": "test-paid"})
+    reading = fetch_json(LOCAL_SENSOR_URL, {"x-mock-payment": "test-paid"})
     payload = {
         "station": reading["station"],
         "celsius": reading["celsius"],

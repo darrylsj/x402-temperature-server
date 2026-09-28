@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 from datetime import datetime, timezone
+from decimal import Decimal
 import json
 from pathlib import Path
 
@@ -192,13 +193,28 @@ def _install_openapi_metadata(app: FastAPI, settings: Settings) -> None:
     app.openapi = custom_openapi
 
 
-def _payment_required_body(settings: Settings) -> dict[str, object]:
+def _payment_required_body(
+    settings: Settings, resource_url: str | None = None
+) -> dict[str, object]:
     paid_path = _paid_endpoint(settings)
+    usdc_assets = {
+        "eip155:8453": {
+            "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            "name": "USD Coin",
+        },
+        "eip155:84532": {
+            "address": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+            "name": "USDC",
+        },
+    }
+    asset = usdc_assets.get(settings.x402_network)
+    if asset is None:
+        raise ValueError("Mock x402 supports Base mainnet or Base Sepolia CAIP-2 networks")
+    amount_atomic = str(int(Decimal(settings.x402_price_usd) * 1_000_000))
     return {
         "x402Version": 2,
         "resource": {
-            "method": "GET",
-            "path": paid_path,
+            "url": resource_url or paid_path,
             "description": (
                 "Latest posted simulated temperature reading from the cloud collector."
                 if settings.enable_cloud_collector
@@ -210,9 +226,11 @@ def _payment_required_body(settings: Settings) -> dict[str, object]:
             {
                 "scheme": "exact",
                 "network": settings.x402_network,
-                "asset": "USDC",
-                "amount": settings.x402_price_usd,
+                "asset": asset["address"],
+                "amount": amount_atomic,
                 "payTo": settings.pay_to_evm_address or "configured-at-proxy",
+                "maxTimeoutSeconds": 300,
+                "extra": {"name": asset["name"], "version": "2"},
             }
         ],
     }
@@ -248,12 +266,12 @@ def _demo_page(settings: Settings) -> str:
   <p><strong>Paid route:</strong> <code>GET {paid_path}</code></p>
   <p>
     Opening the paid route directly should return <code>402 Payment Required</code>.
-    Click the mock-paid button to send the local <code>x-payment: test-paid</code> header and see the simulated payload.
+    Click the mock-paid button to send the local-only <code>x-mock-payment: test-paid</code> header and see the simulated payload. This mock header is deliberately not an x402 protocol header.
   </p>
   <button onclick="callEndpoint('/health')">Health</button>
   <button onclick="callEndpoint('/.well-known/x402-temperature.json')">Manifest</button>
   <button onclick="callEndpoint('{paid_path}')">Unpaid 402</button>
-  <button onclick="callEndpoint('{paid_path}', {{'x-payment': 'test-paid'}})">Mock-Paid 200</button>
+  <button onclick="callEndpoint('{paid_path}', {{'x-mock-payment': 'test-paid'}})">Mock-Paid 200</button>
   <pre id="output">Click a button to run a request.</pre>
   <script>
     async function callEndpoint(path, headers = {{}}, timeoutMs = 8000) {{
@@ -330,16 +348,16 @@ def _install_mock_x402(app: FastAPI, settings: Settings) -> None:
     @app.middleware("http")
     async def mock_x402_gate(request: Request, call_next):
         if request.method == "GET" and request.url.path == paid_path:
-            payment = request.headers.get("x-payment") or request.headers.get("payment")
+            payment = request.headers.get("x-mock-payment")
             if payment != "test-paid":
-                body = _payment_required_body(settings)
+                body = _payment_required_body(settings, str(request.url))
                 return JSONResponse(
                     status_code=402,
                     content=body,
                     headers={"payment-required": base64.b64encode(json.dumps(body).encode()).decode()},
                 )
             response = await call_next(request)
-            response.headers["x-payment-verified"] = "true"
+            response.headers["x-mock-payment-verified"] = "true"
             return response
         return await call_next(request)
 

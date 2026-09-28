@@ -72,9 +72,9 @@ wait_for "http://127.0.0.1:${EDGE_PROXY_PORT}/health"
 wait_for "http://127.0.0.1:${CLOUD_PROXY_PORT}/health"
 
 assert_status 402 "http://127.0.0.1:${EDGE_PROXY_PORT}/temperature"
-assert_status 200 "http://127.0.0.1:${EDGE_PROXY_PORT}/temperature" -H 'x-payment: test-paid'
+assert_status 200 "http://127.0.0.1:${EDGE_PROXY_PORT}/temperature" -H 'x-mock-payment: test-paid'
 
 assert_status 402 "http://127.0.0.1:${CLOUD_PROXY_PORT}/temperature/latest"
-assert_status 200 "http://127.0.0.1:${CLOUD_PROXY_PORT}/temperature/latest" -H 'x-payment: test-paid'
+assert_status 200 "http://127.0.0.1:${CLOUD_PROXY_PORT}/temperature/latest" -H 'x-mock-payment: test-paid'
 
 echo "Both local x402 architecture tests passed."

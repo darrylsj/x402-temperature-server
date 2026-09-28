@@ -20,7 +20,7 @@ function startUpstream() {
     res.json({ openapi: "3.1.0", info: { title: "x402 Temperature Server" } });
   });
   app.get("/temperature", (req, res) => {
-    if (requireForwardedPayment && req.get("x-payment") !== "test-paid") {
+    if (requireForwardedPayment && req.get("x-mock-payment") !== "test-paid") {
       res.status(402).json({ upstream: "missing forwarded payment" });
       return;
     }
@@ -66,13 +66,24 @@ describe("mock x402 proxy architectures", () => {
 
     const unpaid = await request(app).get("/temperature");
     assert.equal(unpaid.status, 402);
-    assert.equal(unpaid.body.resource.path, "/temperature");
-    assert.equal(unpaid.body.accepts[0].amount, "0.001");
+    assert.ok(unpaid.body.resource.url.endsWith("/temperature"));
+    assert.equal(unpaid.body.x402Version, 2);
+    assert.equal(unpaid.body.accepts[0].network, "eip155:84532");
+    assert.equal(unpaid.body.accepts[0].amount, "1000");
+    assert.equal(
+      unpaid.body.accepts[0].asset,
+      "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    );
+    assert.equal(unpaid.body.accepts[0].maxTimeoutSeconds, 300);
+    assert.deepEqual(unpaid.body.accepts[0].extra, { name: "USDC", version: "2" });
     assert.ok(unpaid.headers["payment-required"]);
 
-    const paid = await request(app).get("/temperature").set("x-payment", "test-paid");
+    const legacy = await request(app).get("/temperature").set("x-payment", "test-paid");
+    assert.equal(legacy.status, 402);
+
+    const paid = await request(app).get("/temperature").set("x-mock-payment", "test-paid");
     assert.equal(paid.status, 200);
-    assert.equal(paid.headers["x-payment-verified"], "true");
+    assert.equal(paid.headers["x-mock-payment-verified"], "true");
     assert.equal(paid.body.route, "edge");
   });
 
@@ -91,7 +102,7 @@ describe("mock x402 proxy architectures", () => {
     try {
       paid = await request(app)
         .get("/temperature")
-        .set("x-payment", "test-paid");
+        .set("x-mock-payment", "test-paid");
     } finally {
       requireForwardedPayment = false;
     }
@@ -110,9 +121,9 @@ describe("mock x402 proxy architectures", () => {
 
     const unpaid = await request(app).get("/temperature/latest");
     assert.equal(unpaid.status, 402);
-    assert.equal(unpaid.body.resource.path, "/temperature/latest");
+    assert.ok(unpaid.body.resource.url.endsWith("/temperature/latest"));
 
-    const paid = await request(app).get("/temperature/latest").set("x-payment", "test-paid");
+    const paid = await request(app).get("/temperature/latest").set("x-mock-payment", "test-paid");
     assert.equal(paid.status, 200);
     assert.equal(paid.body.route, "cloud");
   });

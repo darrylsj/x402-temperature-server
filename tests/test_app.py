@@ -117,12 +117,21 @@ def test_mock_x402_gates_edge_route_without_payment() -> None:
 
     unpaid = test_client.get("/temperature")
     assert unpaid.status_code == 402
-    assert unpaid.json()["resource"]["path"] == "/temperature"
+    assert unpaid.json()["resource"]["url"].endswith("/temperature")
+    assert unpaid.json()["x402Version"] == 2
+    assert unpaid.json()["accepts"][0]["network"] == "eip155:8453"
+    assert unpaid.json()["accepts"][0]["amount"] == "1000"
+    assert unpaid.json()["accepts"][0]["asset"] == "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    assert unpaid.json()["accepts"][0]["maxTimeoutSeconds"] == 300
+    assert unpaid.json()["accepts"][0]["extra"] == {"name": "USD Coin", "version": "2"}
     assert "payment-required" in unpaid.headers
 
-    paid = test_client.get("/temperature", headers={"x-payment": "test-paid"})
+    legacy = test_client.get("/temperature", headers={"x-payment": "test-paid"})
+    assert legacy.status_code == 402
+
+    paid = test_client.get("/temperature", headers={"x-mock-payment": "test-paid"})
     assert paid.status_code == 200
-    assert paid.headers["x-payment-verified"] == "true"
+    assert paid.headers["x-mock-payment-verified"] == "true"
     assert test_client.get("/health").json()["x402_mode"] == "mock"
 
 
@@ -191,7 +200,8 @@ def test_mock_x402_gates_cloud_route_without_payment() -> None:
     test_client = TestClient(create_app(settings=settings, sensor=MockSensor()))
     unpaid = test_client.get("/temperature/latest")
     assert unpaid.status_code == 402
-    assert unpaid.json()["resource"]["path"] == "/temperature/latest"
+    assert unpaid.json()["resource"]["url"].endswith("/temperature/latest")
+    assert unpaid.json()["x402Version"] == 2
 
 
 def test_cloud_collector_sample_starts_with_seeded_simulated_reading() -> None:
@@ -206,7 +216,7 @@ def test_cloud_collector_sample_starts_with_seeded_simulated_reading() -> None:
     )
     test_client = TestClient(create_app(settings=settings))
 
-    paid = test_client.get("/temperature/latest", headers={"x-payment": "test-paid"})
+    paid = test_client.get("/temperature/latest", headers={"x-mock-payment": "test-paid"})
     assert paid.status_code == 200
     assert paid.json()["station"] == "danville-demo-01"
     assert paid.json()["celsius"] == 18.2

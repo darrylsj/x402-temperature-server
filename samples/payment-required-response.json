@@ -1,13 +1,22 @@
 {
-  "error": "X-PAYMENT header is required",
+  "x402Version": 2,
+  "resource": {
+    "url": "https://x402-temperature.ngrok.app/temperature/latest",
+    "description": "Latest temperature reading from the cloud collector.",
+    "mimeType": "application/json"
+  },
   "accepts": [
     {
       "scheme": "exact",
-      "network": "base",
-      "asset": "USDC",
-      "amount": "0.001",
-      "resource": "GET /temperature"
+      "network": "eip155:8453",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "amount": "1000",
+      "payTo": "0x0000000000000000000000000000000000000000",
+      "maxTimeoutSeconds": 300,
+      "extra": {
+        "name": "USD Coin",
+        "version": "2"
+      }
     }
   ]
 }
-
