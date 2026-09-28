@@ -161,6 +161,7 @@ Confirmed:
 This public repository is also the reader link hub for *The x402 Handbook*. Start here for the runnable temperature-server build packet and the public companion/source notes that the printed book cites:
 
 - [Handbook companion hub](docs/x402-handbook-companion.md)
+- [x402 V2 contract and migration policy](docs/x402-v2.md)
 - [ResolveBots Trust Index methods and scoring note](docs/resolvebots-trust-index-methods-and-scoring-2026-09-07.md)
 - [August 8 StableTravel field-note summary](docs/august-8-stabletravel-field-note-2026-09-07.md)
 - [August 10 research-report and Box bundle field note](docs/august-10-research-report-and-box-field-note-2026-09-07.md)
@@ -240,6 +241,8 @@ cycle.
 
 For public seller mode, this repo uses a thin Node/Express payment proxy in front of the Python sensor service. The Python app remains the sensor and payload layer; the proxy handles x402 payment negotiation and settlement.
 
+This companion is V2-native. Production payment paths use the current x402 SDKs. The checked-in V2 examples use `PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE`, and `PAYMENT-RESPONSE`, CAIP-2 network identifiers such as `eip155:8453`, token contract addresses, and atomic token amounts. See the [V2 contract and migration policy](docs/x402-v2.md). The local `x-mock-payment` header exists only to test application behavior without moving USDC; it is deliberately not an x402 protocol header.
+
 The two reference architectures deliberately use different facilitator paths:
 
 | Architecture | Public demo | Paid route | Facilitator |
@@ -293,7 +296,7 @@ For a tiny sample host with no Node runtime, the Python app also includes a mock
 ENABLE_MOCK_X402=true python -m x402_temperature_server
 open http://127.0.0.1:8080/demo
 curl -i http://127.0.0.1:8080/temperature
-curl -H 'x-payment: test-paid' http://127.0.0.1:8080/temperature
+curl -H 'x-mock-payment: test-paid' http://127.0.0.1:8080/temperature
 ```
 
 This mode is only for endpoint/demo testing. The Node/Express Gateway proxy remains the production seller path. A normal browser address-bar visit to `/temperature` should show the unpaid `402`; use `/demo` to send the local mock payment header from the browser and view the `200` payload.
@@ -328,7 +331,7 @@ The older direct FastAPI x402 switch remains in this repo as an educational path
 ```bash
 ENABLE_X402=true
 X402_PRICE_USD=0.001
-X402_NETWORK=base
+X402_NETWORK=eip155:8453
 PAY_TO_EVM_ADDRESS=0xYourReceivingWallet
 ```
 

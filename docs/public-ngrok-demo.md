@@ -57,7 +57,7 @@ ngrok HTTPS at https://x402-temperature-edge.ngrok.app
   -> x402host Pi edge service on 127.0.0.1:8080
 ```
 
-Because the current edge station is simulated, the public edge proxy runs with `FORWARD_MOCK_PAYMENT=true`. The public facilitator verifies the buyer payment at the proxy, then the proxy forwards `x-payment: test-paid` to the Pi's local mock gate so the simulated sensor service does not issue a second local challenge.
+Because the current edge station is simulated, the public edge proxy runs with `FORWARD_MOCK_PAYMENT=true`. The public facilitator verifies the buyer payment at the proxy, then the proxy forwards `x-mock-payment: test-paid` to the Pi's local mock gate so the simulated sensor service does not issue a second local challenge. That internal header is test plumbing, not an x402 payment header.
 
 For reboot survival, the Pi app should be managed by systemd and the Mac-side
 ngrok, SSH tunnel, and x402 proxy should be managed by LaunchAgents. See
@@ -210,7 +210,7 @@ That keeps seller setup simpler: `CDP_WALLET_SECRET` is not required for the ser
 
 Coinbase buyer testing is the part that still requires `CDP_WALLET_SECRET`. `CdpX402Client` provisions and signs with a CDP-managed wallet, so it needs the wallet secret in addition to the API key ID and secret. Do not click "Delete and generate new secret" on an existing project unless you have confirmed no deployed app depends on the current wallet secret; use a separate buyer-test project when in doubt.
 
-The `ngrok-skip-browser-warning` header is useful for automated agents and scripts that should bypass ngrok's browser interstitial. The `x-payment: test-paid` header only works in local mock mode; it is not a real payment.
+The `ngrok-skip-browser-warning` header is useful for automated agents and scripts that should bypass ngrok's browser interstitial. The `x-mock-payment: test-paid` header works only in local mock mode; it is not a real payment and must never be presented as part of the x402 protocol.
 
 ## Router Port Forwarding Alternative
 

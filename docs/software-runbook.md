@@ -238,7 +238,7 @@ SENSOR_ORIGIN=http://127.0.0.1:8080 \
 npm start
 ```
 
-An unpaid call to `GET /temperature` returns `402`; a local test call with `x-payment: test-paid` returns the forwarded JSON. Use `X402_GATEWAY_MODE=circle` only for a real Circle Gateway test after confirming the seller address, chain/network, URL, and amount.
+An unpaid call to `GET /temperature` returns `402`; a local test call with `x-mock-payment: test-paid` returns the forwarded JSON. The `x-mock-payment` header is local test plumbing, not an x402 protocol header. Use `X402_GATEWAY_MODE=circle` only for a real Circle Gateway test after confirming the seller address, chain/network, URL, and amount.
 
 If the sample host does not have Node, use the Python mock gate:
 
@@ -246,7 +246,7 @@ If the sample host does not have Node, use the Python mock gate:
 ENABLE_MOCK_X402=true python -m x402_temperature_server
 open http://127.0.0.1:8080/demo
 curl -i http://127.0.0.1:8080/temperature
-curl -H 'x-payment: test-paid' http://127.0.0.1:8080/temperature
+curl -H 'x-mock-payment: test-paid' http://127.0.0.1:8080/temperature
 ```
 
 This proves the same unpaid-402 and paid-200 endpoint contract without installing Node or moving USDC. If a browser address-bar request to `/temperature` shows `402 Payment Required`, that is correct; use `/demo` for a browser-friendly button that sends the mock payment header.
@@ -271,7 +271,7 @@ Then set:
 ```bash
 ENABLE_X402=true
 X402_PRICE_USD=0.001
-X402_NETWORK=base
+X402_NETWORK=eip155:8453
 PAY_TO_EVM_ADDRESS=0xYourReceivingWallet
 ```
 
